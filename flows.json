@@ -1,0 +1,114 @@
+[
+    {
+        "id": "tab-state",
+        "type": "tab",
+        "label": "State",
+        "disabled": false,
+        "info": "State/read endpoints — device and room state queries"
+    },
+    {
+        "id": "tab-lights",
+        "type": "tab",
+        "label": "Lights",
+        "disabled": false,
+        "info": "Light control endpoints — on/off/dim/color-temp per room"
+    },
+    {
+        "id": "tab-scenes",
+        "type": "tab",
+        "label": "Scenes",
+        "disabled": false,
+        "info": "Scene activation endpoints — morning/evening/night/away/welcome"
+    },
+    {
+        "id": "tab-heating",
+        "type": "tab",
+        "label": "Heating",
+        "disabled": false,
+        "info": "Heating control endpoints — thermostat setpoints and modes"
+    },
+    {
+        "id": "tab-cloud",
+        "type": "tab",
+        "label": "Cloud Sync",
+        "disabled": false,
+        "info": "Cloud synchronisation endpoints"
+    },
+
+    {"id": "comment-state-header", "type": "comment", "z": "tab-state", "name": "STATE / READ ENDPOINTS", "info": "GET endpoints that return device and room state.\n/api/state/all is fully wired as a reference implementation.", "x": 160, "y": 40, "wires": []},
+
+    {"id": "state-all-in", "type": "http in", "z": "tab-state", "name": "/api/state/all", "url": "/api/state/all", "method": "get", "upload": false, "swaggerDoc": "", "x": 140, "y": 120, "wires": [["state-all-ccu", "state-all-hue"]]},
+    {"id": "state-all-ccu", "type": "http request", "z": "tab-state", "name": "CCU: get devices", "method": "GET", "ret": "obj", "paytoqs": "ignore", "url": "http://homematic-ccu/addons/xmlapi/statelist.cgi", "tls": "", "persist": false, "proxy": "", "insecureHTTPParser": false, "authType": "", "senderr": false, "headers": [], "x": 380, "y": 100, "wires": [["state-all-join"]]},
+    {"id": "state-all-hue", "type": "http request", "z": "tab-state", "name": "Hue: get lights", "method": "GET", "ret": "obj", "paytoqs": "ignore", "url": "http://hue-bridge/api/${HUE_API_KEY}/lights", "tls": "", "persist": false, "proxy": "", "insecureHTTPParser": false, "authType": "", "senderr": false, "headers": [], "x": 380, "y": 140, "wires": [["state-all-join"]]},
+    {"id": "state-all-join", "type": "join", "z": "tab-state", "name": "merge", "mode": "custom", "build": "object", "property": "payload", "propertyType": "msg", "key": "topic", "joiner": "\\n", "joinerType": "str", "accumulate": false, "timeout": "5", "count": "2", "reduceRight": false, "reduceExp": "", "reduceInit": "", "reduceInitType": "", "reduceFixup": "", "x": 570, "y": 120, "wires": [["state-all-format"]]},
+    {"id": "state-all-format", "type": "function", "z": "tab-state", "name": "format response", "func": "msg.payload = {\n    status: \"ok\",\n    timestamp: new Date().toISOString(),\n    ccu: msg.payload.ccu || {},\n    hue: msg.payload.hue || {}\n};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 730, "y": 120, "wires": [["state-all-out"]]},
+    {"id": "state-all-out", "type": "http response", "z": "tab-state", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 890, "y": 120, "wires": []},
+
+    {"id": "state-room-in", "type": "http in", "z": "tab-state", "name": "/api/state/:room", "url": "/api/state/:room", "method": "get", "upload": false, "swaggerDoc": "", "x": 150, "y": 240, "wires": [["state-room-fn"]]},
+    {"id": "state-room-fn", "type": "function", "z": "tab-state", "name": "TODO: filter by room", "func": "// TODO: query CCU + Hue for devices in msg.req.params.room\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    devices: []\n};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 400, "y": 240, "wires": [["state-room-out"]]},
+    {"id": "state-room-out", "type": "http response", "z": "tab-state", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 610, "y": 240, "wires": []},
+
+    {"id": "heating-status-in", "type": "http in", "z": "tab-state", "name": "/api/heating/status", "url": "/api/heating/status", "method": "get", "upload": false, "swaggerDoc": "", "x": 160, "y": 340, "wires": [["heating-status-fn"]]},
+    {"id": "heating-status-fn", "type": "function", "z": "tab-state", "name": "TODO: read thermostats", "func": "// TODO: query CCU for all thermostat setpoints + current temps\nmsg.payload = {\n    status: \"ok\",\n    thermostats: []\n};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 410, "y": 340, "wires": [["heating-status-out"]]},
+    {"id": "heating-status-out", "type": "http response", "z": "tab-state", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 630, "y": 340, "wires": []},
+
+    {"id": "comment-lights-header", "type": "comment", "z": "tab-lights", "name": "LIGHT CONTROL ENDPOINTS", "info": "POST endpoints for per-room light control.\nRoom param: living-room, kitchen, bedroom, bathroom, entrance, office", "x": 170, "y": 40, "wires": []},
+
+    {"id": "lights-on-in", "type": "http in", "z": "tab-lights", "name": "/api/lights/:room/on", "url": "/api/lights/:room/on", "method": "post", "upload": false, "swaggerDoc": "", "x": 160, "y": 120, "wires": [["lights-on-fn"]]},
+    {"id": "lights-on-fn", "type": "function", "z": "tab-lights", "name": "TODO: turn on lights", "func": "// TODO: send ON command to Hue lights in msg.req.params.room\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"on\"\n};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 400, "y": 120, "wires": [["lights-on-out"]]},
+    {"id": "lights-on-out", "type": "http response", "z": "tab-lights", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 610, "y": 120, "wires": []},
+
+    {"id": "lights-off-in", "type": "http in", "z": "tab-lights", "name": "/api/lights/:room/off", "url": "/api/lights/:room/off", "method": "post", "upload": false, "swaggerDoc": "", "x": 160, "y": 200, "wires": [["lights-off-fn"]]},
+    {"id": "lights-off-fn", "type": "function", "z": "tab-lights", "name": "TODO: turn off lights", "func": "// TODO: send OFF command to Hue lights in msg.req.params.room\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"off\"\n};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 400, "y": 200, "wires": [["lights-off-out"]]},
+    {"id": "lights-off-out", "type": "http response", "z": "tab-lights", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 610, "y": 200, "wires": []},
+
+    {"id": "lights-dim-in", "type": "http in", "z": "tab-lights", "name": "/api/lights/:room/dim", "url": "/api/lights/:room/dim", "method": "post", "upload": false, "swaggerDoc": "", "x": 160, "y": 280, "wires": [["lights-dim-fn"]]},
+    {"id": "lights-dim-fn", "type": "function", "z": "tab-lights", "name": "TODO: set brightness", "func": "// TODO: set Hue brightness to msg.payload.level (0-100)\nconst level = msg.payload.level || 0;\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"dim\",\n    level: level\n};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 400, "y": 280, "wires": [["lights-dim-out"]]},
+    {"id": "lights-dim-out", "type": "http response", "z": "tab-lights", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 610, "y": 280, "wires": []},
+
+    {"id": "lights-ct-in", "type": "http in", "z": "tab-lights", "name": "/api/lights/:room/color-temp", "url": "/api/lights/:room/color-temp", "method": "post", "upload": false, "swaggerDoc": "", "x": 180, "y": 360, "wires": [["lights-ct-fn"]]},
+    {"id": "lights-ct-fn", "type": "function", "z": "tab-lights", "name": "TODO: set color temp", "func": "// TODO: set Hue color temperature to msg.payload.ct (153-500)\nconst ct = msg.payload.ct || 300;\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"color-temp\",\n    ct: ct\n};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 420, "y": 360, "wires": [["lights-ct-out"]]},
+    {"id": "lights-ct-out", "type": "http response", "z": "tab-lights", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 630, "y": 360, "wires": []},
+
+    {"id": "comment-scenes-header", "type": "comment", "z": "tab-scenes", "name": "SCENE ENDPOINTS", "info": "POST endpoints to activate predefined scenes.\nEach scene triggers a combination of light and heating actions.", "x": 140, "y": 40, "wires": []},
+
+    {"id": "scene-morning-in", "type": "http in", "z": "tab-scenes", "name": "/api/scene/morning", "url": "/api/scene/morning", "method": "post", "upload": false, "swaggerDoc": "", "x": 160, "y": 120, "wires": [["scene-morning-fn"]]},
+    {"id": "scene-morning-fn", "type": "function", "z": "tab-scenes", "name": "TODO: morning routine", "func": "// TODO: gradual warm light, comfort heating\nmsg.payload = { status: \"ok\", scene: \"morning\" };\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 410, "y": 120, "wires": [["scene-morning-out"]]},
+    {"id": "scene-morning-out", "type": "http response", "z": "tab-scenes", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 630, "y": 120, "wires": []},
+
+    {"id": "scene-evening-in", "type": "http in", "z": "tab-scenes", "name": "/api/scene/evening", "url": "/api/scene/evening", "method": "post", "upload": false, "swaggerDoc": "", "x": 160, "y": 200, "wires": [["scene-evening-fn"]]},
+    {"id": "scene-evening-fn", "type": "function", "z": "tab-scenes", "name": "TODO: evening routine", "func": "// TODO: warm dimmed lights\nmsg.payload = { status: \"ok\", scene: \"evening\" };\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 410, "y": 200, "wires": [["scene-evening-out"]]},
+    {"id": "scene-evening-out", "type": "http response", "z": "tab-scenes", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 630, "y": 200, "wires": []},
+
+    {"id": "scene-night-in", "type": "http in", "z": "tab-scenes", "name": "/api/scene/night", "url": "/api/scene/night", "method": "post", "upload": false, "swaggerDoc": "", "x": 150, "y": 280, "wires": [["scene-night-fn"]]},
+    {"id": "scene-night-fn", "type": "function", "z": "tab-scenes", "name": "TODO: night mode", "func": "// TODO: minimal light\nmsg.payload = { status: \"ok\", scene: \"night\" };\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 390, "y": 280, "wires": [["scene-night-out"]]},
+    {"id": "scene-night-out", "type": "http response", "z": "tab-scenes", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 610, "y": 280, "wires": []},
+
+    {"id": "scene-away-in", "type": "http in", "z": "tab-scenes", "name": "/api/scene/away", "url": "/api/scene/away", "method": "post", "upload": false, "swaggerDoc": "", "x": 150, "y": 360, "wires": [["scene-away-fn"]]},
+    {"id": "scene-away-fn", "type": "function", "z": "tab-scenes", "name": "TODO: away mode", "func": "// TODO: all lights off + security mode\nmsg.payload = { status: \"ok\", scene: \"away\" };\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 390, "y": 360, "wires": [["scene-away-out"]]},
+    {"id": "scene-away-out", "type": "http response", "z": "tab-scenes", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 610, "y": 360, "wires": []},
+
+    {"id": "scene-welcome-in", "type": "http in", "z": "tab-scenes", "name": "/api/scene/welcome", "url": "/api/scene/welcome", "method": "post", "upload": false, "swaggerDoc": "", "x": 160, "y": 440, "wires": [["scene-welcome-fn"]]},
+    {"id": "scene-welcome-fn", "type": "function", "z": "tab-scenes", "name": "TODO: welcome", "func": "// TODO: entrance lights on\nmsg.payload = { status: \"ok\", scene: \"welcome\" };\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 400, "y": 440, "wires": [["scene-welcome-out"]]},
+    {"id": "scene-welcome-out", "type": "http response", "z": "tab-scenes", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 620, "y": 440, "wires": []},
+
+    {"id": "comment-heating-header", "type": "comment", "z": "tab-heating", "name": "HEATING CONTROL ENDPOINTS", "info": "POST endpoints for thermostat control via Homematic CCU.\nRoom param: living-room, kitchen, bedroom, bathroom, entrance, office", "x": 170, "y": 40, "wires": []},
+
+    {"id": "heating-set-in", "type": "http in", "z": "tab-heating", "name": "/api/heating/:room/set", "url": "/api/heating/:room/set", "method": "post", "upload": false, "swaggerDoc": "", "x": 170, "y": 120, "wires": [["heating-set-fn"]]},
+    {"id": "heating-set-fn", "type": "function", "z": "tab-heating", "name": "TODO: set thermostat", "func": "// TODO: set CCU thermostat setpoint to msg.payload.temp\nconst temp = msg.payload.temp || 20;\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"set\",\n    temp: temp\n};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 410, "y": 120, "wires": [["heating-set-out"]]},
+    {"id": "heating-set-out", "type": "http response", "z": "tab-heating", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 630, "y": 120, "wires": []},
+
+    {"id": "heating-eco-in", "type": "http in", "z": "tab-heating", "name": "/api/heating/eco", "url": "/api/heating/eco", "method": "post", "upload": false, "swaggerDoc": "", "x": 150, "y": 220, "wires": [["heating-eco-fn"]]},
+    {"id": "heating-eco-fn", "type": "function", "z": "tab-heating", "name": "TODO: eco mode", "func": "// TODO: set all CCU thermostats to eco setpoint\nmsg.payload = { status: \"ok\", action: \"eco\" };\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 390, "y": 220, "wires": [["heating-eco-out"]]},
+    {"id": "heating-eco-out", "type": "http response", "z": "tab-heating", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 610, "y": 220, "wires": []},
+
+    {"id": "heating-comfort-in", "type": "http in", "z": "tab-heating", "name": "/api/heating/comfort", "url": "/api/heating/comfort", "method": "post", "upload": false, "swaggerDoc": "", "x": 160, "y": 300, "wires": [["heating-comfort-fn"]]},
+    {"id": "heating-comfort-fn", "type": "function", "z": "tab-heating", "name": "TODO: comfort mode", "func": "// TODO: set all CCU thermostats to comfort setpoint\nmsg.payload = { status: \"ok\", action: \"comfort\" };\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 410, "y": 300, "wires": [["heating-comfort-out"]]},
+    {"id": "heating-comfort-out", "type": "http response", "z": "tab-heating", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 630, "y": 300, "wires": []},
+
+    {"id": "comment-cloud-header", "type": "comment", "z": "tab-cloud", "name": "CLOUD SYNC ENDPOINTS", "info": "Endpoints for synchronising state with digitalhome.cloud", "x": 160, "y": 40, "wires": []},
+
+    {"id": "cloud-sync-in", "type": "http in", "z": "tab-cloud", "name": "/api/cloud/sync", "url": "/api/cloud/sync", "method": "post", "upload": false, "swaggerDoc": "", "x": 150, "y": 120, "wires": [["cloud-sync-fn"]]},
+    {"id": "cloud-sync-fn", "type": "function", "z": "tab-cloud", "name": "TODO: push state to cloud", "func": "// TODO: collect full state snapshot, POST to digitalhome.cloud API\nmsg.payload = { status: \"ok\", action: \"cloud-sync\" };\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 410, "y": 120, "wires": [["cloud-sync-out"]]},
+    {"id": "cloud-sync-out", "type": "http response", "z": "tab-cloud", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 630, "y": 120, "wires": []}
+]
