@@ -3,5 +3,10 @@
     "description": "Node-RED flows for digitalhome.edge",
     "version": "0.1.0",
     "private": true,
-    "dependencies": {}
+    "dependencies": {},
+    "node-red": {
+        "settings": {
+            "flowFile": "flows.json"
+        }
+    }
 }
