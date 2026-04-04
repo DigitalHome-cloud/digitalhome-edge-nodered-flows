@@ -34,6 +34,42 @@
         "disabled": false,
         "info": "Cloud synchronisation endpoints"
     },
+    {
+        "id": "tab-dashboard",
+        "type": "tab",
+        "label": "Dashboard",
+        "disabled": false,
+        "info": "Dashboard UI wiring — connects device state to UI widgets"
+    },
+
+    {"id": "ui-base", "type": "ui-base", "name": "digitalhome.edge", "path": "/ui", "appIcon": "", "colour": "#1e293b", "darkTheme": true, "sizes": {"pagePadding": "12px", "groupGap": "12px", "groupBorderRadius": "8px", "widgetGap": "6px"}},
+
+    {"id": "ui-page-home", "type": "ui-page", "name": "Home", "ui": "ui-base", "path": "/home", "icon": "home", "layout": "grid", "theme": "ui-base", "order": 1, "className": ""},
+    {"id": "ui-page-lights", "type": "ui-page", "name": "Lights", "ui": "ui-base", "path": "/lights", "icon": "lightbulb", "layout": "grid", "theme": "ui-base", "order": 2, "className": ""},
+    {"id": "ui-page-heating", "type": "ui-page", "name": "Heating", "ui": "ui-base", "path": "/heating", "icon": "thermostat", "layout": "grid", "theme": "ui-base", "order": 3, "className": ""},
+    {"id": "ui-page-scenes", "type": "ui-page", "name": "Scenes", "ui": "ui-base", "path": "/scenes", "icon": "theater_comedy", "layout": "grid", "theme": "ui-base", "order": 4, "className": ""},
+    {"id": "ui-page-system", "type": "ui-page", "name": "System", "ui": "ui-base", "path": "/system", "icon": "settings", "layout": "grid", "theme": "ui-base", "order": 5, "className": ""},
+
+    {"id": "ui-group-header", "type": "ui-group", "name": "Header", "page": "ui-page-home", "width": "6", "height": "1", "order": 1, "showTitle": false, "className": ""},
+    {"id": "ui-group-rooms", "type": "ui-group", "name": "Rooms", "page": "ui-page-home", "width": "6", "height": "1", "order": 2, "showTitle": true, "className": ""},
+    {"id": "ui-group-quickactions", "type": "ui-group", "name": "Quick Actions", "page": "ui-page-home", "width": "6", "height": "1", "order": 3, "showTitle": true, "className": ""},
+
+    {"id": "ui-group-living", "type": "ui-group", "name": "Living Room", "page": "ui-page-lights", "width": "3", "height": "1", "order": 1, "showTitle": true, "className": ""},
+    {"id": "ui-group-kitchen", "type": "ui-group", "name": "Kitchen", "page": "ui-page-lights", "width": "3", "height": "1", "order": 2, "showTitle": true, "className": ""},
+    {"id": "ui-group-bedroom", "type": "ui-group", "name": "Bedroom", "page": "ui-page-lights", "width": "3", "height": "1", "order": 3, "showTitle": true, "className": ""},
+    {"id": "ui-group-bathroom", "type": "ui-group", "name": "Bathroom", "page": "ui-page-lights", "width": "3", "height": "1", "order": 4, "showTitle": true, "className": ""},
+    {"id": "ui-group-entrance", "type": "ui-group", "name": "Entrance", "page": "ui-page-lights", "width": "3", "height": "1", "order": 5, "showTitle": true, "className": ""},
+    {"id": "ui-group-office", "type": "ui-group", "name": "Office", "page": "ui-page-lights", "width": "3", "height": "1", "order": 6, "showTitle": true, "className": ""},
+
+    {"id": "ui-group-thermo-living", "type": "ui-group", "name": "Living Room", "page": "ui-page-heating", "width": "3", "height": "1", "order": 1, "showTitle": true, "className": ""},
+    {"id": "ui-group-thermo-kitchen", "type": "ui-group", "name": "Kitchen", "page": "ui-page-heating", "width": "3", "height": "1", "order": 2, "showTitle": true, "className": ""},
+    {"id": "ui-group-thermo-bedroom", "type": "ui-group", "name": "Bedroom", "page": "ui-page-heating", "width": "3", "height": "1", "order": 3, "showTitle": true, "className": ""},
+    {"id": "ui-group-thermo-bathroom", "type": "ui-group", "name": "Bathroom", "page": "ui-page-heating", "width": "3", "height": "1", "order": 4, "showTitle": true, "className": ""},
+    {"id": "ui-group-heating-modes", "type": "ui-group", "name": "Modes", "page": "ui-page-heating", "width": "6", "height": "1", "order": 5, "showTitle": true, "className": ""},
+
+    {"id": "ui-group-scenes", "type": "ui-group", "name": "Scenes", "page": "ui-page-scenes", "width": "6", "height": "1", "order": 1, "showTitle": false, "className": ""},
+
+    {"id": "ui-group-status", "type": "ui-group", "name": "Service Status", "page": "ui-page-system", "width": "6", "height": "1", "order": 1, "showTitle": true, "className": ""},
 
     {"id": "comment-state-header", "type": "comment", "z": "tab-state", "name": "STATE / READ ENDPOINTS", "info": "GET endpoints that return device and room state.\n/api/state/all is fully wired as a reference implementation.", "x": 160, "y": 40, "wires": []},
 
@@ -110,5 +146,50 @@
 
     {"id": "cloud-sync-in", "type": "http in", "z": "tab-cloud", "name": "/api/cloud/sync", "url": "/api/cloud/sync", "method": "post", "upload": false, "swaggerDoc": "", "x": 150, "y": 120, "wires": [["cloud-sync-fn"]]},
     {"id": "cloud-sync-fn", "type": "function", "z": "tab-cloud", "name": "TODO: push state to cloud", "func": "// TODO: collect full state snapshot, POST to digitalhome.cloud API\nmsg.payload = { status: \"ok\", action: \"cloud-sync\" };\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 410, "y": 120, "wires": [["cloud-sync-out"]]},
-    {"id": "cloud-sync-out", "type": "http response", "z": "tab-cloud", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 630, "y": 120, "wires": []}
+    {"id": "cloud-sync-out", "type": "http response", "z": "tab-cloud", "name": "200", "statusCode": "200", "headers": {"content-type": "application/json"}, "x": 630, "y": 120, "wires": []},
+
+    {"id": "comment-dashboard-header", "type": "comment", "z": "tab-dashboard", "name": "DASHBOARD UI WIRING", "info": "Dashboard widgets that connect to the API flows.\nUI served at :1880/ui", "x": 150, "y": 40, "wires": []},
+
+    {"id": "ui-header", "type": "ui-template", "z": "tab-dashboard", "group": "ui-group-header", "name": "Header", "order": 1, "width": "6", "height": "1", "head": "", "format": "<template>\n  <div style=\"display:flex; align-items:center; gap:12px; padding:4px 0;\">\n    <div style=\"width:10px; height:10px; border-radius:50%; background:#22c55e;\"></div>\n    <div>\n      <div style=\"font-size:1.2em; font-weight:600; color:#e2e8f0;\">digitalhome.edge</div>\n      <div style=\"font-size:0.8em; color:#94a3b8;\">Stage Server</div>\n    </div>\n  </div>\n</template>", "storeOutMessages": false, "passthru": false, "resendOnRefresh": true, "templateScope": "local", "className": "", "x": 160, "y": 120, "wires": [[]]},
+
+    {"id": "ui-scene-morning", "type": "ui-button", "z": "tab-dashboard", "group": "ui-group-quickactions", "name": "Morning", "label": "Morning", "order": 1, "width": "2", "height": "1", "passthru": false, "tooltip": "Activate morning scene", "color": "", "bgcolor": "#1e40af", "className": "", "icon": "mdi-weather-sunset-up", "payload": "{}", "payloadType": "json", "topic": "morning", "textColor": "", "x": 160, "y": 200, "wires": [["ui-scene-morning-req"]]},
+    {"id": "ui-scene-morning-req", "type": "http request", "z": "tab-dashboard", "name": "POST /api/scene/morning", "method": "POST", "ret": "obj", "paytoqs": "ignore", "url": "http://localhost:1880/api/scene/morning", "tls": "", "persist": false, "proxy": "", "insecureHTTPParser": false, "authType": "", "senderr": false, "headers": [], "x": 400, "y": 200, "wires": [["ui-scene-notify"]]},
+
+    {"id": "ui-scene-evening", "type": "ui-button", "z": "tab-dashboard", "group": "ui-group-quickactions", "name": "Evening", "label": "Evening", "order": 2, "width": "2", "height": "1", "passthru": false, "tooltip": "Activate evening scene", "color": "", "bgcolor": "#1e40af", "className": "", "icon": "mdi-weather-sunset-down", "payload": "{}", "payloadType": "json", "topic": "evening", "textColor": "", "x": 160, "y": 260, "wires": [["ui-scene-evening-req"]]},
+    {"id": "ui-scene-evening-req", "type": "http request", "z": "tab-dashboard", "name": "POST /api/scene/evening", "method": "POST", "ret": "obj", "paytoqs": "ignore", "url": "http://localhost:1880/api/scene/evening", "tls": "", "persist": false, "proxy": "", "insecureHTTPParser": false, "authType": "", "senderr": false, "headers": [], "x": 400, "y": 260, "wires": [["ui-scene-notify"]]},
+
+    {"id": "ui-scene-night", "type": "ui-button", "z": "tab-dashboard", "group": "ui-group-quickactions", "name": "Night", "label": "Night", "order": 3, "width": "2", "height": "1", "passthru": false, "tooltip": "Activate night scene", "color": "", "bgcolor": "#1e3a5f", "className": "", "icon": "mdi-weather-night", "payload": "{}", "payloadType": "json", "topic": "night", "textColor": "", "x": 160, "y": 320, "wires": [["ui-scene-night-req"]]},
+    {"id": "ui-scene-night-req", "type": "http request", "z": "tab-dashboard", "name": "POST /api/scene/night", "method": "POST", "ret": "obj", "paytoqs": "ignore", "url": "http://localhost:1880/api/scene/night", "tls": "", "persist": false, "proxy": "", "insecureHTTPParser": false, "authType": "", "senderr": false, "headers": [], "x": 400, "y": 320, "wires": [["ui-scene-notify"]]},
+
+    {"id": "ui-scene-notify", "type": "ui-notification", "z": "tab-dashboard", "ui": "ui-base", "position": "top right", "colorDefault": true, "color": "#000000", "displayTime": "3", "showCountdown": true, "outputs": 0, "allowDismiss": true, "dismissText": "", "raw": false, "className": "", "name": "Scene activated", "x": 640, "y": 260, "wires": []},
+
+    {"id": "ui-light-living-switch", "type": "ui-switch", "z": "tab-dashboard", "group": "ui-group-living", "name": "Light", "label": "Light", "order": 1, "width": "3", "height": "1", "passthru": false, "decouple": false, "topic": "living-room", "topicType": "str", "style": "", "className": "", "onvalue": "true", "onvalueType": "bool", "onicon": "mdi-lightbulb-on", "oncolor": "#fbbf24", "offvalue": "false", "offvalueType": "bool", "officon": "mdi-lightbulb-off-outline", "offcolor": "#64748b", "x": 150, "y": 420, "wires": [["ui-light-living-action"]]},
+    {"id": "ui-light-living-action", "type": "function", "z": "tab-dashboard", "name": "on/off request", "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 330, "y": 420, "wires": [["ui-light-request"]]},
+
+    {"id": "ui-light-kitchen-switch", "type": "ui-switch", "z": "tab-dashboard", "group": "ui-group-kitchen", "name": "Light", "label": "Light", "order": 1, "width": "3", "height": "1", "passthru": false, "decouple": false, "topic": "kitchen", "topicType": "str", "style": "", "className": "", "onvalue": "true", "onvalueType": "bool", "onicon": "mdi-lightbulb-on", "oncolor": "#fbbf24", "offvalue": "false", "offvalueType": "bool", "officon": "mdi-lightbulb-off-outline", "offcolor": "#64748b", "x": 150, "y": 480, "wires": [["ui-light-kitchen-action"]]},
+    {"id": "ui-light-kitchen-action", "type": "function", "z": "tab-dashboard", "name": "on/off request", "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 330, "y": 480, "wires": [["ui-light-request"]]},
+
+    {"id": "ui-light-bedroom-switch", "type": "ui-switch", "z": "tab-dashboard", "group": "ui-group-bedroom", "name": "Light", "label": "Light", "order": 1, "width": "3", "height": "1", "passthru": false, "decouple": false, "topic": "bedroom", "topicType": "str", "style": "", "className": "", "onvalue": "true", "onvalueType": "bool", "onicon": "mdi-lightbulb-on", "oncolor": "#fbbf24", "offvalue": "false", "offvalueType": "bool", "officon": "mdi-lightbulb-off-outline", "offcolor": "#64748b", "x": 150, "y": 540, "wires": [["ui-light-bedroom-action"]]},
+    {"id": "ui-light-bedroom-action", "type": "function", "z": "tab-dashboard", "name": "on/off request", "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 330, "y": 540, "wires": [["ui-light-request"]]},
+
+    {"id": "ui-light-bathroom-switch", "type": "ui-switch", "z": "tab-dashboard", "group": "ui-group-bathroom", "name": "Light", "label": "Light", "order": 1, "width": "3", "height": "1", "passthru": false, "decouple": false, "topic": "bathroom", "topicType": "str", "style": "", "className": "", "onvalue": "true", "onvalueType": "bool", "onicon": "mdi-lightbulb-on", "oncolor": "#fbbf24", "offvalue": "false", "offvalueType": "bool", "officon": "mdi-lightbulb-off-outline", "offcolor": "#64748b", "x": 150, "y": 600, "wires": [["ui-light-bathroom-action"]]},
+    {"id": "ui-light-bathroom-action", "type": "function", "z": "tab-dashboard", "name": "on/off request", "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 330, "y": 600, "wires": [["ui-light-request"]]},
+
+    {"id": "ui-light-entrance-switch", "type": "ui-switch", "z": "tab-dashboard", "group": "ui-group-entrance", "name": "Light", "label": "Light", "order": 1, "width": "3", "height": "1", "passthru": false, "decouple": false, "topic": "entrance", "topicType": "str", "style": "", "className": "", "onvalue": "true", "onvalueType": "bool", "onicon": "mdi-lightbulb-on", "oncolor": "#fbbf24", "offvalue": "false", "offvalueType": "bool", "officon": "mdi-lightbulb-off-outline", "offcolor": "#64748b", "x": 150, "y": 660, "wires": [["ui-light-entrance-action"]]},
+    {"id": "ui-light-entrance-action", "type": "function", "z": "tab-dashboard", "name": "on/off request", "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 330, "y": 660, "wires": [["ui-light-request"]]},
+
+    {"id": "ui-light-office-switch", "type": "ui-switch", "z": "tab-dashboard", "group": "ui-group-office", "name": "Light", "label": "Light", "order": 1, "width": "3", "height": "1", "passthru": false, "decouple": false, "topic": "office", "topicType": "str", "style": "", "className": "", "onvalue": "true", "onvalueType": "bool", "onicon": "mdi-lightbulb-on", "oncolor": "#fbbf24", "offvalue": "false", "offvalueType": "bool", "officon": "mdi-lightbulb-off-outline", "offcolor": "#64748b", "x": 150, "y": 720, "wires": [["ui-light-office-action"]]},
+    {"id": "ui-light-office-action", "type": "function", "z": "tab-dashboard", "name": "on/off request", "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;", "outputs": 1, "timeout": "", "noerr": 0, "initialize": "", "finalize": "", "libs": [], "x": 330, "y": 720, "wires": [["ui-light-request"]]},
+
+    {"id": "ui-light-request", "type": "http request", "z": "tab-dashboard", "name": "call API", "method": "use", "ret": "obj", "paytoqs": "ignore", "url": "", "tls": "", "persist": false, "proxy": "", "insecureHTTPParser": false, "authType": "", "senderr": false, "headers": [], "x": 530, "y": 560, "wires": [[]]},
+
+    {"id": "ui-heat-eco", "type": "ui-button", "z": "tab-dashboard", "group": "ui-group-heating-modes", "name": "Eco", "label": "Eco Mode", "order": 1, "width": "3", "height": "1", "passthru": false, "tooltip": "Set all thermostats to eco", "color": "", "bgcolor": "#166534", "className": "", "icon": "mdi-leaf", "payload": "{}", "payloadType": "json", "topic": "eco", "textColor": "", "x": 160, "y": 800, "wires": [["ui-heat-eco-req"]]},
+    {"id": "ui-heat-eco-req", "type": "http request", "z": "tab-dashboard", "name": "POST /api/heating/eco", "method": "POST", "ret": "obj", "paytoqs": "ignore", "url": "http://localhost:1880/api/heating/eco", "tls": "", "persist": false, "proxy": "", "insecureHTTPParser": false, "authType": "", "senderr": false, "headers": [], "x": 390, "y": 800, "wires": [[]]},
+
+    {"id": "ui-heat-comfort", "type": "ui-button", "z": "tab-dashboard", "group": "ui-group-heating-modes", "name": "Comfort", "label": "Comfort Mode", "order": 2, "width": "3", "height": "1", "passthru": false, "tooltip": "Set all thermostats to comfort", "color": "", "bgcolor": "#b45309", "className": "", "icon": "mdi-fire", "payload": "{}", "payloadType": "json", "topic": "comfort", "textColor": "", "x": 170, "y": 860, "wires": [["ui-heat-comfort-req"]]},
+    {"id": "ui-heat-comfort-req", "type": "http request", "z": "tab-dashboard", "name": "POST /api/heating/comfort", "method": "POST", "ret": "obj", "paytoqs": "ignore", "url": "http://localhost:1880/api/heating/comfort", "tls": "", "persist": false, "proxy": "", "insecureHTTPParser": false, "authType": "", "senderr": false, "headers": [], "x": 410, "y": 860, "wires": [[]]},
+
+    {"id": "ui-cloud-sync-btn", "type": "ui-button", "z": "tab-dashboard", "group": "ui-group-status", "name": "Sync", "label": "Sync to Cloud", "order": 1, "width": "3", "height": "1", "passthru": false, "tooltip": "Push state to digitalhome.cloud", "color": "", "bgcolor": "#1e40af", "className": "", "icon": "mdi-cloud-upload", "payload": "{}", "payloadType": "json", "topic": "sync", "textColor": "", "x": 160, "y": 940, "wires": [["ui-cloud-sync-req"]]},
+    {"id": "ui-cloud-sync-req", "type": "http request", "z": "tab-dashboard", "name": "POST /api/cloud/sync", "method": "POST", "ret": "obj", "paytoqs": "ignore", "url": "http://localhost:1880/api/cloud/sync", "tls": "", "persist": false, "proxy": "", "insecureHTTPParser": false, "authType": "", "senderr": false, "headers": [], "x": 400, "y": 940, "wires": [["ui-cloud-sync-status"]]},
+    {"id": "ui-cloud-sync-status", "type": "ui-text", "z": "tab-dashboard", "group": "ui-group-status", "name": "Last sync", "label": "Last sync", "order": 2, "width": "3", "height": "1", "format": "{{msg.payload.status}} — {{msg.payload.action}}", "className": "", "style": false, "font": "", "fontSize": 14, "color": "#94a3b8", "x": 620, "y": 940, "wires": []}
 ]
