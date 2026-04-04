@@ -44,11 +44,11 @@
 
     {"id": "ui-base", "type": "ui-base", "name": "digitalhome.edge", "path": "/ui", "appIcon": "", "colour": "#1e293b", "darkTheme": true, "sizes": {"pagePadding": "12px", "groupGap": "12px", "groupBorderRadius": "8px", "widgetGap": "6px"}},
 
-    {"id": "ui-page-home", "type": "ui-page", "name": "Home", "ui": "ui-base", "path": "/home", "icon": "home", "layout": "grid", "theme": "ui-base", "order": 1, "className": ""},
-    {"id": "ui-page-lights", "type": "ui-page", "name": "Lights", "ui": "ui-base", "path": "/lights", "icon": "lightbulb", "layout": "grid", "theme": "ui-base", "order": 2, "className": ""},
-    {"id": "ui-page-heating", "type": "ui-page", "name": "Heating", "ui": "ui-base", "path": "/heating", "icon": "thermostat", "layout": "grid", "theme": "ui-base", "order": 3, "className": ""},
-    {"id": "ui-page-scenes", "type": "ui-page", "name": "Scenes", "ui": "ui-base", "path": "/scenes", "icon": "theater_comedy", "layout": "grid", "theme": "ui-base", "order": 4, "className": ""},
-    {"id": "ui-page-system", "type": "ui-page", "name": "System", "ui": "ui-base", "path": "/system", "icon": "settings", "layout": "grid", "theme": "ui-base", "order": 5, "className": ""},
+    {"id": "ui-page-home", "type": "ui-page", "name": "Home", "ui": "ui-base", "path": "/home", "icon": "home", "layout": "grid", "order": 1, "className": ""},
+    {"id": "ui-page-lights", "type": "ui-page", "name": "Lights", "ui": "ui-base", "path": "/lights", "icon": "lightbulb", "layout": "grid", "order": 2, "className": ""},
+    {"id": "ui-page-heating", "type": "ui-page", "name": "Heating", "ui": "ui-base", "path": "/heating", "icon": "thermostat", "layout": "grid", "order": 3, "className": ""},
+    {"id": "ui-page-scenes", "type": "ui-page", "name": "Scenes", "ui": "ui-base", "path": "/scenes", "icon": "theater_comedy", "layout": "grid", "order": 4, "className": ""},
+    {"id": "ui-page-system", "type": "ui-page", "name": "System", "ui": "ui-base", "path": "/system", "icon": "settings", "layout": "grid", "order": 5, "className": ""},
 
     {"id": "ui-group-header", "type": "ui-group", "name": "Header", "page": "ui-page-home", "width": "6", "height": "1", "order": 1, "showTitle": false, "className": ""},
     {"id": "ui-group-rooms", "type": "ui-group", "name": "Rooms", "page": "ui-page-home", "width": "6", "height": "1", "order": 2, "showTitle": true, "className": ""},
