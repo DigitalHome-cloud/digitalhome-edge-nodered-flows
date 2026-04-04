@@ -42,9 +42,9 @@
         "info": "Dashboard UI wiring — connects device state to UI widgets"
     },
 
-    {"id": "ui-base", "type": "ui-base", "name": "digitalhome.edge", "path": "/ui", "appIcon": "", "colour": "#1e293b", "darkTheme": true, "sizes": {"pagePadding": "12px", "groupGap": "12px", "groupBorderRadius": "8px", "widgetGap": "6px"}},
-
     {"id": "ui-theme-dark", "type": "ui-theme", "name": "Dark Slate", "colors": {"surface": "#1e293b", "primary": "#3b82f6", "bgPage": "#0f172a", "groupBg": "#1e293b", "groupOutline": "#334155"}, "sizes": {"pagePadding": "12px", "groupGap": "12px", "groupBorderRadius": "8px", "widgetGap": "6px", "density": "default"}},
+
+    {"id": "ui-base", "type": "ui-base", "name": "digitalhome.edge", "path": "/ui", "appIcon": "", "theme": "ui-theme-dark"},
 
     {"id": "ui-page-home", "type": "ui-page", "name": "Home", "ui": "ui-base", "path": "/home", "icon": "home", "layout": "grid", "theme": "ui-theme-dark", "order": 1, "className": ""},
     {"id": "ui-page-lights", "type": "ui-page", "name": "Lights", "ui": "ui-base", "path": "/lights", "icon": "lightbulb", "layout": "grid", "theme": "ui-theme-dark", "order": 2, "className": ""},
