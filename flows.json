@@ -1270,7 +1270,6 @@
     "id": "dhc-global-css",
     "type": "ui-template",
     "z": "tab-dashboard",
-    "page": "",
     "ui": "dhc-ui-base",
     "name": "DHC Global CSS",
     "order": 0,
@@ -2639,9 +2638,7 @@
     "height": "1",
     "order": 1,
     "showTitle": true,
-    "className": "",
-    "visible": "",
-    "disabled": ""
+    "className": ""
   },
   {
     "id": "ui-group-dev-list",
@@ -2652,9 +2649,7 @@
     "height": "1",
     "order": 2,
     "showTitle": true,
-    "className": "",
-    "visible": "",
-    "disabled": ""
+    "className": ""
   },
   {
     "id": "dev-dash-inject",
@@ -2717,8 +2712,6 @@
     "type": "ui-template",
     "z": "tab-devices",
     "group": "ui-group-dev-overview",
-    "page": "",
-    "ui": "",
     "name": "Inventory Overview",
     "order": 1,
     "width": "6",
@@ -2741,8 +2734,6 @@
     "type": "ui-template",
     "z": "tab-devices",
     "group": "ui-group-dev-list",
-    "page": "",
-    "ui": "",
     "name": "Device Inventory Table",
     "order": 1,
     "width": "12",
