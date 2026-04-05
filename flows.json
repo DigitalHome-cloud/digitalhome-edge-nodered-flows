@@ -1,127 +1,2621 @@
 [
-    {"id":"tab-state","type":"tab","label":"State","disabled":false,"info":"State/read endpoints — device and room state queries"},
-    {"id":"tab-lights","type":"tab","label":"Lights","disabled":false,"info":"Light control endpoints — on/off/dim/color-temp per room"},
-    {"id":"tab-scenes","type":"tab","label":"Scenes","disabled":false,"info":"Scene activation endpoints — morning/evening/night/away/welcome"},
-    {"id":"tab-heating","type":"tab","label":"Heating","disabled":false,"info":"Heating control endpoints — thermostat setpoints and modes"},
-    {"id":"tab-cloud","type":"tab","label":"Cloud Sync","disabled":false,"info":"Cloud synchronisation endpoints"},
-    {"id":"tab-dashboard","type":"tab","label":"Dashboard","disabled":false,"info":"Dashboard UI wiring — connects device state to UI widgets"},
-    {"id":"ui-theme-dark","type":"ui-theme","name":"DHC Dark","colors":{"surface":"#1e293b","primary":"#22c55e","bgPage":"#0f172a","groupBg":"#1e293b","groupOutline":"#0f172a"},"sizes":{"density":"default","pagePadding":"12px","groupGap":"12px","groupBorderRadius":"12px","widgetGap":"12px"}},
-    {"id":"dhc-ui-base","type":"ui-base","name":"digitalhome.edge","path":"/ui","appIcon":""},
-    {"id":"ui-page-home","type":"ui-page","name":"Home","ui":"dhc-ui-base","path":"/home","icon":"home","layout":"grid","theme":"ui-theme-dark","order":1,"className":""},
-    {"id":"ui-page-lights","type":"ui-page","name":"Lights","ui":"dhc-ui-base","path":"/lights","icon":"lightbulb","layout":"grid","theme":"ui-theme-dark","order":2,"className":""},
-    {"id":"ui-page-heating","type":"ui-page","name":"Heating","ui":"dhc-ui-base","path":"/heating","icon":"thermostat","layout":"grid","theme":"ui-theme-dark","order":3,"className":""},
-    {"id":"ui-page-scenes","type":"ui-page","name":"Scenes","ui":"dhc-ui-base","path":"/scenes","icon":"theater_comedy","layout":"grid","theme":"ui-theme-dark","order":4,"className":""},
-    {"id":"ui-page-system","type":"ui-page","name":"System","ui":"dhc-ui-base","path":"/system","icon":"settings","layout":"grid","theme":"ui-theme-dark","order":5,"className":""},
-    {"id":"ui-group-header","type":"ui-group","name":"Header","page":"ui-page-home","width":"6","height":"1","order":1,"showTitle":false,"className":""},
-    {"id":"ui-group-rooms","type":"ui-group","name":"Rooms","page":"ui-page-home","width":"6","height":"1","order":2,"showTitle":true,"className":""},
-    {"id":"ui-group-quickactions","type":"ui-group","name":"Quick Actions","page":"ui-page-home","width":"6","height":"1","order":3,"showTitle":true,"className":""},
-    {"id":"ui-group-living","type":"ui-group","name":"Living Room","page":"ui-page-lights","width":"3","height":"1","order":1,"showTitle":true,"className":""},
-    {"id":"ui-group-kitchen","type":"ui-group","name":"Kitchen","page":"ui-page-lights","width":"3","height":"1","order":2,"showTitle":true,"className":""},
-    {"id":"ui-group-bedroom","type":"ui-group","name":"Bedroom","page":"ui-page-lights","width":"3","height":"1","order":3,"showTitle":true,"className":""},
-    {"id":"ui-group-bathroom","type":"ui-group","name":"Bathroom","page":"ui-page-lights","width":"3","height":"1","order":4,"showTitle":true,"className":""},
-    {"id":"ui-group-entrance","type":"ui-group","name":"Entrance","page":"ui-page-lights","width":"3","height":"1","order":5,"showTitle":true,"className":""},
-    {"id":"ui-group-office","type":"ui-group","name":"Office","page":"ui-page-lights","width":"3","height":"1","order":6,"showTitle":true,"className":""},
-    {"id":"ui-group-thermo-living","type":"ui-group","name":"Living Room","page":"ui-page-heating","width":"3","height":"1","order":1,"showTitle":true,"className":""},
-    {"id":"ui-group-thermo-kitchen","type":"ui-group","name":"Kitchen","page":"ui-page-heating","width":"3","height":"1","order":2,"showTitle":true,"className":""},
-    {"id":"ui-group-thermo-bedroom","type":"ui-group","name":"Bedroom","page":"ui-page-heating","width":"3","height":"1","order":3,"showTitle":true,"className":""},
-    {"id":"ui-group-thermo-bathroom","type":"ui-group","name":"Bathroom","page":"ui-page-heating","width":"3","height":"1","order":4,"showTitle":true,"className":""},
-    {"id":"ui-group-heating-modes","type":"ui-group","name":"Modes","page":"ui-page-heating","width":"6","height":"1","order":5,"showTitle":true,"className":""},
-    {"id":"ui-group-scenes","type":"ui-group","name":"Scenes","page":"ui-page-scenes","width":"6","height":"1","order":1,"showTitle":false,"className":""},
-    {"id":"ui-group-status","type":"ui-group","name":"Service Status","page":"ui-page-system","width":"6","height":"1","order":1,"showTitle":true,"className":""},
-    {"id":"ui-group-devices","type":"ui-group","name":"Device Connectivity","page":"ui-page-system","width":"6","height":"1","order":2,"showTitle":true,"className":""},
-    {"id":"comment-state-header","type":"comment","z":"tab-state","name":"STATE / READ ENDPOINTS","info":"GET endpoints that return device and room state.\n/api/state/all is fully wired as a reference implementation.","x":160,"y":40,"wires":[]},
-    {"id":"state-all-in","type":"http in","z":"tab-state","name":"/api/state/all","url":"/api/state/all","method":"get","upload":false,"swaggerDoc":"","x":140,"y":120,"wires":[["state-all-ccu","state-all-hue"]]},
-    {"id":"state-all-ccu","type":"http request","z":"tab-state","name":"CCU: get devices","method":"GET","ret":"obj","paytoqs":"ignore","url":"http://homematic-ccu/addons/xmlapi/statelist.cgi","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":false,"headers":[],"x":380,"y":100,"wires":[["state-all-join"]]},
-    {"id":"state-all-hue","type":"http request","z":"tab-state","name":"Hue: get lights","method":"GET","ret":"obj","paytoqs":"ignore","url":"http://hue-bridge/api/${HUE_API_KEY}/lights","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":false,"headers":[],"x":380,"y":140,"wires":[["state-all-join"]]},
-    {"id":"state-all-join","type":"join","z":"tab-state","name":"merge","mode":"custom","build":"object","property":"payload","propertyType":"msg","key":"topic","joiner":"\\n","joinerType":"str","accumulate":false,"timeout":"5","count":"2","reduceRight":false,"reduceExp":"","reduceInit":"","reduceInitType":"","reduceFixup":"","x":570,"y":120,"wires":[["state-all-format"]]},
-    {"id":"state-all-format","type":"function","z":"tab-state","name":"format response","func":"msg.payload = {\n    status: \"ok\",\n    timestamp: new Date().toISOString(),\n    ccu: msg.payload.ccu || {},\n    hue: msg.payload.hue || {}\n};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":730,"y":120,"wires":[["state-all-out"]]},
-    {"id":"state-all-out","type":"http response","z":"tab-state","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":890,"y":120,"wires":[]},
-    {"id":"state-room-in","type":"http in","z":"tab-state","name":"/api/state/:room","url":"/api/state/:room","method":"get","upload":false,"swaggerDoc":"","x":150,"y":240,"wires":[["state-room-fn"]]},
-    {"id":"state-room-fn","type":"function","z":"tab-state","name":"TODO: filter by room","func":"// TODO: query CCU + Hue for devices in msg.req.params.room\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    devices: []\n};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":400,"y":240,"wires":[["state-room-out"]]},
-    {"id":"state-room-out","type":"http response","z":"tab-state","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":610,"y":240,"wires":[]},
-    {"id":"heating-status-in","type":"http in","z":"tab-state","name":"/api/heating/status","url":"/api/heating/status","method":"get","upload":false,"swaggerDoc":"","x":160,"y":340,"wires":[["heating-status-fn"]]},
-    {"id":"heating-status-fn","type":"function","z":"tab-state","name":"TODO: read thermostats","func":"// TODO: query CCU for all thermostat setpoints + current temps\nmsg.payload = {\n    status: \"ok\",\n    thermostats: []\n};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":410,"y":340,"wires":[["heating-status-out"]]},
-    {"id":"heating-status-out","type":"http response","z":"tab-state","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":630,"y":340,"wires":[]},
-    {"id":"comment-lights-header","type":"comment","z":"tab-lights","name":"LIGHT CONTROL ENDPOINTS","info":"POST endpoints for per-room light control.\nRoom param: living-room, kitchen, bedroom, bathroom, entrance, office","x":170,"y":40,"wires":[]},
-    {"id":"lights-on-in","type":"http in","z":"tab-lights","name":"/api/lights/:room/on","url":"/api/lights/:room/on","method":"post","upload":false,"swaggerDoc":"","x":160,"y":120,"wires":[["lights-on-fn"]]},
-    {"id":"lights-on-fn","type":"function","z":"tab-lights","name":"TODO: turn on lights","func":"// TODO: send ON command to Hue lights in msg.req.params.room\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"on\"\n};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":400,"y":120,"wires":[["lights-on-out"]]},
-    {"id":"lights-on-out","type":"http response","z":"tab-lights","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":610,"y":120,"wires":[]},
-    {"id":"lights-off-in","type":"http in","z":"tab-lights","name":"/api/lights/:room/off","url":"/api/lights/:room/off","method":"post","upload":false,"swaggerDoc":"","x":160,"y":200,"wires":[["lights-off-fn"]]},
-    {"id":"lights-off-fn","type":"function","z":"tab-lights","name":"TODO: turn off lights","func":"// TODO: send OFF command to Hue lights in msg.req.params.room\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"off\"\n};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":400,"y":200,"wires":[["lights-off-out"]]},
-    {"id":"lights-off-out","type":"http response","z":"tab-lights","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":610,"y":200,"wires":[]},
-    {"id":"lights-dim-in","type":"http in","z":"tab-lights","name":"/api/lights/:room/dim","url":"/api/lights/:room/dim","method":"post","upload":false,"swaggerDoc":"","x":160,"y":280,"wires":[["lights-dim-fn"]]},
-    {"id":"lights-dim-fn","type":"function","z":"tab-lights","name":"TODO: set brightness","func":"// TODO: set Hue brightness to msg.payload.level (0-100)\nconst level = msg.payload.level || 0;\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"dim\",\n    level: level\n};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":400,"y":280,"wires":[["lights-dim-out"]]},
-    {"id":"lights-dim-out","type":"http response","z":"tab-lights","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":610,"y":280,"wires":[]},
-    {"id":"lights-ct-in","type":"http in","z":"tab-lights","name":"/api/lights/:room/color-temp","url":"/api/lights/:room/color-temp","method":"post","upload":false,"swaggerDoc":"","x":180,"y":360,"wires":[["lights-ct-fn"]]},
-    {"id":"lights-ct-fn","type":"function","z":"tab-lights","name":"TODO: set color temp","func":"// TODO: set Hue color temperature to msg.payload.ct (153-500)\nconst ct = msg.payload.ct || 300;\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"color-temp\",\n    ct: ct\n};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":420,"y":360,"wires":[["lights-ct-out"]]},
-    {"id":"lights-ct-out","type":"http response","z":"tab-lights","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":630,"y":360,"wires":[]},
-    {"id":"comment-scenes-header","type":"comment","z":"tab-scenes","name":"SCENE ENDPOINTS","info":"POST endpoints to activate predefined scenes.\nEach scene triggers a combination of light and heating actions.","x":140,"y":40,"wires":[]},
-    {"id":"scene-morning-in","type":"http in","z":"tab-scenes","name":"/api/scene/morning","url":"/api/scene/morning","method":"post","upload":false,"swaggerDoc":"","x":160,"y":120,"wires":[["scene-morning-fn"]]},
-    {"id":"scene-morning-fn","type":"function","z":"tab-scenes","name":"TODO: morning routine","func":"// TODO: gradual warm light, comfort heating\nmsg.payload = { status: \"ok\", scene: \"morning\" };\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":410,"y":120,"wires":[["scene-morning-out"]]},
-    {"id":"scene-morning-out","type":"http response","z":"tab-scenes","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":630,"y":120,"wires":[]},
-    {"id":"scene-evening-in","type":"http in","z":"tab-scenes","name":"/api/scene/evening","url":"/api/scene/evening","method":"post","upload":false,"swaggerDoc":"","x":160,"y":200,"wires":[["scene-evening-fn"]]},
-    {"id":"scene-evening-fn","type":"function","z":"tab-scenes","name":"TODO: evening routine","func":"// TODO: warm dimmed lights\nmsg.payload = { status: \"ok\", scene: \"evening\" };\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":410,"y":200,"wires":[["scene-evening-out"]]},
-    {"id":"scene-evening-out","type":"http response","z":"tab-scenes","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":630,"y":200,"wires":[]},
-    {"id":"scene-night-in","type":"http in","z":"tab-scenes","name":"/api/scene/night","url":"/api/scene/night","method":"post","upload":false,"swaggerDoc":"","x":150,"y":280,"wires":[["scene-night-fn"]]},
-    {"id":"scene-night-fn","type":"function","z":"tab-scenes","name":"TODO: night mode","func":"// TODO: minimal light\nmsg.payload = { status: \"ok\", scene: \"night\" };\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":390,"y":280,"wires":[["scene-night-out"]]},
-    {"id":"scene-night-out","type":"http response","z":"tab-scenes","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":610,"y":280,"wires":[]},
-    {"id":"scene-away-in","type":"http in","z":"tab-scenes","name":"/api/scene/away","url":"/api/scene/away","method":"post","upload":false,"swaggerDoc":"","x":150,"y":360,"wires":[["scene-away-fn"]]},
-    {"id":"scene-away-fn","type":"function","z":"tab-scenes","name":"TODO: away mode","func":"// TODO: all lights off + security mode\nmsg.payload = { status: \"ok\", scene: \"away\" };\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":390,"y":360,"wires":[["scene-away-out"]]},
-    {"id":"scene-away-out","type":"http response","z":"tab-scenes","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":610,"y":360,"wires":[]},
-    {"id":"scene-welcome-in","type":"http in","z":"tab-scenes","name":"/api/scene/welcome","url":"/api/scene/welcome","method":"post","upload":false,"swaggerDoc":"","x":160,"y":440,"wires":[["scene-welcome-fn"]]},
-    {"id":"scene-welcome-fn","type":"function","z":"tab-scenes","name":"TODO: welcome","func":"// TODO: entrance lights on\nmsg.payload = { status: \"ok\", scene: \"welcome\" };\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":400,"y":440,"wires":[["scene-welcome-out"]]},
-    {"id":"scene-welcome-out","type":"http response","z":"tab-scenes","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":620,"y":440,"wires":[]},
-    {"id":"comment-heating-header","type":"comment","z":"tab-heating","name":"HEATING CONTROL ENDPOINTS","info":"POST endpoints for thermostat control via Homematic CCU.\nRoom param: living-room, kitchen, bedroom, bathroom, entrance, office","x":170,"y":40,"wires":[]},
-    {"id":"heating-set-in","type":"http in","z":"tab-heating","name":"/api/heating/:room/set","url":"/api/heating/:room/set","method":"post","upload":false,"swaggerDoc":"","x":170,"y":120,"wires":[["heating-set-fn"]]},
-    {"id":"heating-set-fn","type":"function","z":"tab-heating","name":"TODO: set thermostat","func":"// TODO: set CCU thermostat setpoint to msg.payload.temp\nconst temp = msg.payload.temp || 20;\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"set\",\n    temp: temp\n};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":410,"y":120,"wires":[["heating-set-out"]]},
-    {"id":"heating-set-out","type":"http response","z":"tab-heating","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":630,"y":120,"wires":[]},
-    {"id":"heating-eco-in","type":"http in","z":"tab-heating","name":"/api/heating/eco","url":"/api/heating/eco","method":"post","upload":false,"swaggerDoc":"","x":150,"y":220,"wires":[["heating-eco-fn"]]},
-    {"id":"heating-eco-fn","type":"function","z":"tab-heating","name":"TODO: eco mode","func":"// TODO: set all CCU thermostats to eco setpoint\nmsg.payload = { status: \"ok\", action: \"eco\" };\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":390,"y":220,"wires":[["heating-eco-out"]]},
-    {"id":"heating-eco-out","type":"http response","z":"tab-heating","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":610,"y":220,"wires":[]},
-    {"id":"heating-comfort-in","type":"http in","z":"tab-heating","name":"/api/heating/comfort","url":"/api/heating/comfort","method":"post","upload":false,"swaggerDoc":"","x":160,"y":300,"wires":[["heating-comfort-fn"]]},
-    {"id":"heating-comfort-fn","type":"function","z":"tab-heating","name":"TODO: comfort mode","func":"// TODO: set all CCU thermostats to comfort setpoint\nmsg.payload = { status: \"ok\", action: \"comfort\" };\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":410,"y":300,"wires":[["heating-comfort-out"]]},
-    {"id":"heating-comfort-out","type":"http response","z":"tab-heating","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":630,"y":300,"wires":[]},
-    {"id":"comment-cloud-header","type":"comment","z":"tab-cloud","name":"CLOUD SYNC ENDPOINTS","info":"Endpoints for synchronising state with digitalhome.cloud","x":160,"y":40,"wires":[]},
-    {"id":"cloud-sync-in","type":"http in","z":"tab-cloud","name":"/api/cloud/sync","url":"/api/cloud/sync","method":"post","upload":false,"swaggerDoc":"","x":150,"y":120,"wires":[["cloud-sync-fn"]]},
-    {"id":"cloud-sync-fn","type":"function","z":"tab-cloud","name":"TODO: push state to cloud","func":"// TODO: collect full state snapshot, POST to digitalhome.cloud API\nmsg.payload = { status: \"ok\", action: \"cloud-sync\" };\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":410,"y":120,"wires":[["cloud-sync-out"]]},
-    {"id":"cloud-sync-out","type":"http response","z":"tab-cloud","name":"200","statusCode":"200","headers":{"content-type":"application/json"},"x":630,"y":120,"wires":[]},
-    {"id":"comment-dashboard-header","type":"comment","z":"tab-dashboard","name":"DASHBOARD UI WIRING","info":"Dashboard widgets that connect to the API flows.\nUI served at :1880/ui","x":150,"y":40,"wires":[]},
-    {"id":"dhc-global-css","type":"ui-template","z":"tab-dashboard","page":"","ui":"dhc-ui-base","name":"DHC Global CSS","order":0,"width":0,"height":0,"head":"","format":"/* === DHC Design Language — Global Overrides === */\n\n/* Page background */\n.v-main { background-color: #0f172a !important; }\n\n/* Navigation drawer / sidebar */\n.v-navigation-drawer {\n  background-color: #1e293b !important;\n  border-right: 1px solid rgba(148, 163, 184, 0.3) !important;\n}\n.v-navigation-drawer .v-list-item-title {\n  color: #cbd5f5 !important;\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif !important;\n  font-size: 0.85rem !important;\n}\n.v-navigation-drawer .v-list-item--active {\n  background: rgba(34, 197, 94, 0.12) !important;\n}\n.v-navigation-drawer .v-list-item--active .v-list-item-title {\n  color: #4ade80 !important;\n}\n\n/* App bar / header */\n.v-app-bar {\n  background: rgba(15, 23, 42, 0.9) !important;\n  backdrop-filter: blur(10px) !important;\n  -webkit-backdrop-filter: blur(10px) !important;\n  border-bottom: 1px solid rgba(148, 163, 184, 0.3) !important;\n}\n.v-app-bar .v-toolbar-title { color: #e2e8f0 !important; }\n\n/* Group cards — radial gradient like DHC cards */\n.nrdb-ui-group {\n  background: radial-gradient(circle at top left, #1e293b, #020617) !important;\n  border: 1px solid rgba(148, 163, 184, 0.3) !important;\n  border-radius: 12px !important;\n}\n.nrdb-ui-group .v-card-title,\n.nrdb-ui-group .nrdb-ui-group-title {\n  color: #94a3b8 !important;\n  text-transform: uppercase !important;\n  letter-spacing: 0.05em !important;\n  font-size: 0.75rem !important;\n  font-weight: 600 !important;\n}\n\n/* Primary text within groups */\n.nrdb-ui-group .v-card-text { color: #e5e7eb !important; }\n\n/* Buttons — pill shape */\n.v-btn {\n  border-radius: 999px !important;\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif !important;\n  font-weight: 500 !important;\n  letter-spacing: 0.02em !important;\n}\n\n/* Switch styling */\n.v-switch .v-switch__track { opacity: 0.7 !important; }\n\n/* Text inputs — deep surface background */\n.v-field {\n  background-color: #020617 !important;\n  border-radius: 8px !important;\n}\n.v-field input { color: #e5e7eb !important; }\n.v-field--focused { border-color: #22c55e !important; }\n\n/* Labels and secondary text */\n.v-label { color: #9ca3af !important; }\n\n/* Slider thumb and track */\n.v-slider-thumb { color: #22c55e !important; }\n\n/* Notification styling */\n.v-snackbar__content {\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif !important;\n}\n\n/* Scrollbar styling */\n::-webkit-scrollbar { width: 6px; }\n::-webkit-scrollbar-track { background: #020617; }\n::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }\n::-webkit-scrollbar-thumb:hover { background: #334155; }\n\n/* System font globally */\nbody, .v-application {\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif !important;\n}","storeOutMessages":false,"passthru":false,"resendOnRefresh":true,"templateScope":"global","className":"","x":400,"y":60,"wires":[[]]},
-    {"id":"ui-header","type":"ui-template","z":"tab-dashboard","group":"ui-group-header","name":"Header","order":1,"width":"6","height":"1","head":"","format":"<template>\n  <div style=\"display:flex; align-items:center; gap:12px; padding:8px 0;\">\n    <div style=\"width:36px; height:36px; border-radius:8px;\n         background:linear-gradient(135deg, #22c55e, #0ea5e9);\n         display:flex; align-items:center; justify-content:center;\">\n      <span style=\"font-size:18px; font-weight:700; color:#fff;\">d</span>\n    </div>\n    <div>\n      <div style=\"font-size:1.1rem; font-weight:600; color:#e2e8f0;\">\n        digitalhome.edge\n      </div>\n      <div style=\"font-size:0.7rem; color:#94a3b8; letter-spacing:0.05em;\n           text-transform:uppercase;\">\n        Stage Server\n      </div>\n    </div>\n  </div>\n</template>","storeOutMessages":false,"passthru":false,"resendOnRefresh":true,"templateScope":"local","className":"","x":160,"y":120,"wires":[[]]},
-    {"id":"ui-scene-morning","type":"ui-button","z":"tab-dashboard","group":"ui-group-quickactions","name":"Morning","label":"Morning","order":1,"width":"2","height":"1","passthru":false,"tooltip":"Activate morning scene","color":"#fce7f3","bgcolor":"rgba(236, 72, 153, 0.2)","className":"","icon":"mdi-weather-sunset-up","payload":"{}","payloadType":"json","topic":"morning","textColor":"","x":160,"y":200,"wires":[["ui-scene-morning-req"]]},
-    {"id":"ui-scene-morning-req","type":"http request","z":"tab-dashboard","name":"POST /api/scene/morning","method":"POST","ret":"obj","paytoqs":"ignore","url":"http://localhost:1880/api/scene/morning","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":false,"headers":[],"x":400,"y":200,"wires":[["ui-scene-notify"]]},
-    {"id":"ui-scene-evening","type":"ui-button","z":"tab-dashboard","group":"ui-group-quickactions","name":"Evening","label":"Evening","order":2,"width":"2","height":"1","passthru":false,"tooltip":"Activate evening scene","color":"#fce7f3","bgcolor":"rgba(236, 72, 153, 0.2)","className":"","icon":"mdi-weather-sunset-down","payload":"{}","payloadType":"json","topic":"evening","textColor":"","x":160,"y":260,"wires":[["ui-scene-evening-req"]]},
-    {"id":"ui-scene-evening-req","type":"http request","z":"tab-dashboard","name":"POST /api/scene/evening","method":"POST","ret":"obj","paytoqs":"ignore","url":"http://localhost:1880/api/scene/evening","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":false,"headers":[],"x":400,"y":260,"wires":[["ui-scene-notify"]]},
-    {"id":"ui-scene-night","type":"ui-button","z":"tab-dashboard","group":"ui-group-quickactions","name":"Night","label":"Night","order":3,"width":"2","height":"1","passthru":false,"tooltip":"Activate night scene","color":"#fce7f3","bgcolor":"rgba(236, 72, 153, 0.2)","className":"","icon":"mdi-weather-night","payload":"{}","payloadType":"json","topic":"night","textColor":"","x":160,"y":320,"wires":[["ui-scene-night-req"]]},
-    {"id":"ui-scene-night-req","type":"http request","z":"tab-dashboard","name":"POST /api/scene/night","method":"POST","ret":"obj","paytoqs":"ignore","url":"http://localhost:1880/api/scene/night","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":false,"headers":[],"x":400,"y":320,"wires":[["ui-scene-notify"]]},
-    {"id":"ui-scene-notify","type":"ui-notification","z":"tab-dashboard","ui":"dhc-ui-base","position":"top right","colorDefault":true,"color":"#000000","displayTime":"3","showCountdown":true,"outputs":0,"allowDismiss":true,"dismissText":"","raw":false,"className":"","name":"Scene activated","x":640,"y":260,"wires":[]},
-    {"id":"ui-light-living-switch","type":"ui-switch","z":"tab-dashboard","group":"ui-group-living","name":"Light","label":"Light","order":1,"width":"3","height":"1","passthru":false,"decouple":false,"topic":"living-room","topicType":"str","style":"","className":"","onvalue":"true","onvalueType":"bool","onicon":"mdi-lightbulb-on","oncolor":"#fbbf24","offvalue":"false","offvalueType":"bool","officon":"mdi-lightbulb-off-outline","offcolor":"#64748b","x":150,"y":420,"wires":[["ui-light-living-action"]]},
-    {"id":"ui-light-living-action","type":"function","z":"tab-dashboard","name":"on/off request","func":"const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":330,"y":420,"wires":[["ui-light-request"]]},
-    {"id":"ui-light-kitchen-switch","type":"ui-switch","z":"tab-dashboard","group":"ui-group-kitchen","name":"Light","label":"Light","order":1,"width":"3","height":"1","passthru":false,"decouple":false,"topic":"kitchen","topicType":"str","style":"","className":"","onvalue":"true","onvalueType":"bool","onicon":"mdi-lightbulb-on","oncolor":"#fbbf24","offvalue":"false","offvalueType":"bool","officon":"mdi-lightbulb-off-outline","offcolor":"#64748b","x":150,"y":480,"wires":[["ui-light-kitchen-action"]]},
-    {"id":"ui-light-kitchen-action","type":"function","z":"tab-dashboard","name":"on/off request","func":"const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":330,"y":480,"wires":[["ui-light-request"]]},
-    {"id":"ui-light-bedroom-switch","type":"ui-switch","z":"tab-dashboard","group":"ui-group-bedroom","name":"Light","label":"Light","order":1,"width":"3","height":"1","passthru":false,"decouple":false,"topic":"bedroom","topicType":"str","style":"","className":"","onvalue":"true","onvalueType":"bool","onicon":"mdi-lightbulb-on","oncolor":"#fbbf24","offvalue":"false","offvalueType":"bool","officon":"mdi-lightbulb-off-outline","offcolor":"#64748b","x":150,"y":540,"wires":[["ui-light-bedroom-action"]]},
-    {"id":"ui-light-bedroom-action","type":"function","z":"tab-dashboard","name":"on/off request","func":"const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":330,"y":540,"wires":[["ui-light-request"]]},
-    {"id":"ui-light-bathroom-switch","type":"ui-switch","z":"tab-dashboard","group":"ui-group-bathroom","name":"Light","label":"Light","order":1,"width":"3","height":"1","passthru":false,"decouple":false,"topic":"bathroom","topicType":"str","style":"","className":"","onvalue":"true","onvalueType":"bool","onicon":"mdi-lightbulb-on","oncolor":"#fbbf24","offvalue":"false","offvalueType":"bool","officon":"mdi-lightbulb-off-outline","offcolor":"#64748b","x":150,"y":600,"wires":[["ui-light-bathroom-action"]]},
-    {"id":"ui-light-bathroom-action","type":"function","z":"tab-dashboard","name":"on/off request","func":"const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":330,"y":600,"wires":[["ui-light-request"]]},
-    {"id":"ui-light-entrance-switch","type":"ui-switch","z":"tab-dashboard","group":"ui-group-entrance","name":"Light","label":"Light","order":1,"width":"3","height":"1","passthru":false,"decouple":false,"topic":"entrance","topicType":"str","style":"","className":"","onvalue":"true","onvalueType":"bool","onicon":"mdi-lightbulb-on","oncolor":"#fbbf24","offvalue":"false","offvalueType":"bool","officon":"mdi-lightbulb-off-outline","offcolor":"#64748b","x":150,"y":660,"wires":[["ui-light-entrance-action"]]},
-    {"id":"ui-light-entrance-action","type":"function","z":"tab-dashboard","name":"on/off request","func":"const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":330,"y":660,"wires":[["ui-light-request"]]},
-    {"id":"ui-light-office-switch","type":"ui-switch","z":"tab-dashboard","group":"ui-group-office","name":"Light","label":"Light","order":1,"width":"3","height":"1","passthru":false,"decouple":false,"topic":"office","topicType":"str","style":"","className":"","onvalue":"true","onvalueType":"bool","onicon":"mdi-lightbulb-on","oncolor":"#fbbf24","offvalue":"false","offvalueType":"bool","officon":"mdi-lightbulb-off-outline","offcolor":"#64748b","x":150,"y":720,"wires":[["ui-light-office-action"]]},
-    {"id":"ui-light-office-action","type":"function","z":"tab-dashboard","name":"on/off request","func":"const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":330,"y":720,"wires":[["ui-light-request"]]},
-    {"id":"ui-light-request","type":"http request","z":"tab-dashboard","name":"call API","method":"use","ret":"obj","paytoqs":"ignore","url":"","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":false,"headers":[],"x":530,"y":560,"wires":[[]]},
-    {"id":"ui-heat-eco","type":"ui-button","z":"tab-dashboard","group":"ui-group-heating-modes","name":"Eco","label":"Eco Mode","order":1,"width":"3","height":"1","passthru":false,"tooltip":"Set all thermostats to eco","color":"#bbf7d0","bgcolor":"rgba(34, 197, 94, 0.2)","className":"","icon":"mdi-leaf","payload":"{}","payloadType":"json","topic":"eco","textColor":"","x":160,"y":800,"wires":[["ui-heat-eco-req"]]},
-    {"id":"ui-heat-eco-req","type":"http request","z":"tab-dashboard","name":"POST /api/heating/eco","method":"POST","ret":"obj","paytoqs":"ignore","url":"http://localhost:1880/api/heating/eco","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":false,"headers":[],"x":390,"y":800,"wires":[[]]},
-    {"id":"ui-heat-comfort","type":"ui-button","z":"tab-dashboard","group":"ui-group-heating-modes","name":"Comfort","label":"Comfort Mode","order":2,"width":"3","height":"1","passthru":false,"tooltip":"Set all thermostats to comfort","color":"#fecaca","bgcolor":"rgba(239, 68, 68, 0.2)","className":"","icon":"mdi-fire","payload":"{}","payloadType":"json","topic":"comfort","textColor":"","x":170,"y":860,"wires":[["ui-heat-comfort-req"]]},
-    {"id":"ui-heat-comfort-req","type":"http request","z":"tab-dashboard","name":"POST /api/heating/comfort","method":"POST","ret":"obj","paytoqs":"ignore","url":"http://localhost:1880/api/heating/comfort","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":false,"headers":[],"x":410,"y":860,"wires":[[]]},
-    {"id":"ui-cloud-sync-btn","type":"ui-button","z":"tab-dashboard","group":"ui-group-status","name":"Sync","label":"Sync to Cloud","order":1,"width":"3","height":"1","passthru":false,"tooltip":"Push state to digitalhome.cloud","color":"#93c5fd","bgcolor":"rgba(59, 130, 246, 0.2)","className":"","icon":"mdi-cloud-upload","payload":"{}","payloadType":"json","topic":"sync","textColor":"","x":160,"y":940,"wires":[["ui-cloud-sync-req"]]},
-    {"id":"ui-cloud-sync-req","type":"http request","z":"tab-dashboard","name":"POST /api/cloud/sync","method":"POST","ret":"obj","paytoqs":"ignore","url":"http://localhost:1880/api/cloud/sync","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":false,"headers":[],"x":400,"y":940,"wires":[["ui-cloud-sync-status"]]},
-    {"id":"ui-cloud-sync-status","type":"ui-text","z":"tab-dashboard","group":"ui-group-status","name":"Last sync","label":"Last sync","order":2,"width":"3","height":"1","format":"{{msg.payload.status}} — {{msg.payload.action}}","className":"","style":false,"font":"","fontSize":14,"color":"#94a3b8","x":620,"y":940,"wires":[]},
-    {"id":"sys-status-inject","type":"inject","z":"tab-dashboard","name":"Every 30s","props":[{"p":"payload"}],"repeat":"30","crontab":"","once":true,"onceDelay":"2","topic":"","payload":"","payloadType":"date","x":160,"y":1040,"wires":[["sys-status-check"]]},
-    {"id":"sys-status-check","type":"function","z":"tab-dashboard","name":"Build status requests","func":"// Fan out to check each service/device\n// Output 1: MCP server check\n// Output 2: Hue bridge check\n// Output 3: CCU check\nconst mcp = { url: 'http://localhost:8000/', method: 'GET', requestTimeout: 3000 };\nconst hue = { url: 'http://hue-bridge/api/config', method: 'GET', requestTimeout: 3000 };\nconst ccu = { url: 'http://homematic-ccu/addons/xmlapi/version.cgi', method: 'GET', requestTimeout: 3000 };\nreturn [mcp, hue, ccu];","outputs":3,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":370,"y":1040,"wires":[["sys-mcp-req"],["sys-hue-req"],["sys-ccu-req"]]},
-    {"id":"sys-mcp-req","type":"http request","z":"tab-dashboard","name":"MCP server","method":"use","ret":"txt","paytoqs":"ignore","url":"","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":true,"headers":[],"x":570,"y":1000,"wires":[["sys-status-merge"]]},
-    {"id":"sys-hue-req","type":"http request","z":"tab-dashboard","name":"Hue bridge","method":"use","ret":"obj","paytoqs":"ignore","url":"","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":true,"headers":[],"x":570,"y":1040,"wires":[["sys-status-merge"]]},
-    {"id":"sys-ccu-req","type":"http request","z":"tab-dashboard","name":"CCU","method":"use","ret":"txt","paytoqs":"ignore","url":"","tls":"","persist":false,"proxy":"","insecureHTTPParser":false,"authType":"","senderr":true,"headers":[],"x":570,"y":1080,"wires":[["sys-status-merge"]]},
-    {"id":"sys-status-merge","type":"join","z":"tab-dashboard","name":"merge 3","mode":"custom","build":"array","property":"payload","propertyType":"msg","key":"topic","joiner":"\\n","joinerType":"str","accumulate":false,"timeout":"5","count":"3","reduceRight":false,"reduceExp":"","reduceInit":"","reduceInitType":"","reduceFixup":"","x":730,"y":1040,"wires":[["sys-status-format"]]},
-    {"id":"sys-status-format","type":"function","z":"tab-dashboard","name":"Format status","func":"// msg.payload is array of 3 responses [mcp, hue, ccu]\n// Each has statusCode (200 = ok, or undefined/error)\nconst results = msg.payload || [];\nconst now = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit', second:'2-digit'});\n\nfunction check(resp, i) {\n    if (resp && resp.statusCode && resp.statusCode >= 200 && resp.statusCode < 400) {\n        return { status: 'online', code: resp.statusCode };\n    }\n    return { status: 'offline', code: resp ? resp.statusCode || 'err' : 'err' };\n}\n\n// Node-RED is always online if this flow is running\nconst nodered = { status: 'online' };\nconst mcp = check(results[0], 0);\nconst hue = check(results[1], 1);\nconst ccu = check(results[2], 2);\n\nmsg.payload = {\n    timestamp: now,\n    services: {\n        nodered: nodered,\n        mcp: mcp\n    },\n    devices: {\n        hue: hue,\n        ccu: ccu\n    }\n};\nreturn msg;","outputs":1,"timeout":"","noerr":0,"initialize":"","finalize":"","libs":[],"x":890,"y":1040,"wires":[["sys-status-widget","sys-devices-widget"]]},
-    {"id":"sys-status-widget","type":"ui-template","z":"tab-dashboard","group":"ui-group-status","name":"Service Status","order":1,"width":"6","height":"1","head":"","format":"<template>\n  <div style=\"padding:4px 0;\">\n    <div v-for=\"(svc, name) in msg?.payload?.services\" :key=\"name\"\n         style=\"display:flex; align-items:center; gap:10px; padding:6px 0;\n                border-bottom:1px solid rgba(148,163,184,0.15);\">\n      <div :style=\"{\n        width:'10px', height:'10px', borderRadius:'50%',\n        background: svc.status === 'online' ? '#22c55e' : '#ef4444',\n        boxShadow: svc.status === 'online' ? '0 0 6px #22c55e' : '0 0 6px #ef4444'\n      }\"></div>\n      <span style=\"color:#e5e7eb; font-size:0.85rem; font-weight:500; min-width:120px;\">\n        {{ name === 'nodered' ? 'Node-RED' : name === 'mcp' ? 'MCP Server' : name }}\n      </span>\n      <span :style=\"{\n        fontSize:'0.7rem', fontWeight:600, letterSpacing:'0.05em', textTransform:'uppercase',\n        padding:'2px 8px', borderRadius:'999px',\n        background: svc.status === 'online' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',\n        color: svc.status === 'online' ? '#4ade80' : '#fca5a5',\n        border: svc.status === 'online' ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(239,68,68,0.4)'\n      }\">\n        {{ svc.status }}\n      </span>\n    </div>\n    <div style=\"color:#64748b; font-size:0.65rem; padding-top:6px; text-align:right;\">\n      Updated {{ msg?.payload?.timestamp }}\n    </div>\n  </div>\n</template>","storeOutMessages":true,"passthru":false,"resendOnRefresh":true,"templateScope":"local","className":"","x":1070,"y":1020,"wires":[[]]},
-    {"id":"sys-devices-widget","type":"ui-template","z":"tab-dashboard","group":"ui-group-devices","name":"Device Connectivity","order":1,"width":"6","height":"1","head":"","format":"<template>\n  <div style=\"padding:4px 0;\">\n    <div v-for=\"(dev, name) in msg?.payload?.devices\" :key=\"name\"\n         style=\"display:flex; align-items:center; gap:10px; padding:6px 0;\n                border-bottom:1px solid rgba(148,163,184,0.15);\">\n      <div :style=\"{\n        width:'10px', height:'10px', borderRadius:'50%',\n        background: dev.status === 'online' ? '#22c55e' : '#ef4444',\n        boxShadow: dev.status === 'online' ? '0 0 6px #22c55e' : '0 0 6px #ef4444'\n      }\"></div>\n      <span style=\"color:#e5e7eb; font-size:0.85rem; font-weight:500; min-width:120px;\">\n        {{ name === 'hue' ? 'Hue Bridge' : name === 'ccu' ? 'Homematic CCU' : name }}\n      </span>\n      <span :style=\"{\n        fontSize:'0.7rem', fontWeight:600, letterSpacing:'0.05em', textTransform:'uppercase',\n        padding:'2px 8px', borderRadius:'999px',\n        background: dev.status === 'online' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',\n        color: dev.status === 'online' ? '#4ade80' : '#fca5a5',\n        border: dev.status === 'online' ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(239,68,68,0.4)'\n      }\">\n        {{ dev.status }}\n      </span>\n    </div>\n    <div style=\"color:#64748b; font-size:0.65rem; padding-top:6px; text-align:right;\">\n      Updated {{ msg?.payload?.timestamp }}\n    </div>\n  </div>\n</template>","storeOutMessages":true,"passthru":false,"resendOnRefresh":true,"templateScope":"local","className":"","x":1070,"y":1060,"wires":[[]]}
+  {
+    "id": "tab-state",
+    "type": "tab",
+    "label": "State",
+    "disabled": false,
+    "info": "State/read endpoints \u2014 device and room state queries",
+    "env": []
+  },
+  {
+    "id": "tab-lights",
+    "type": "tab",
+    "label": "Lights",
+    "disabled": false,
+    "info": "Light control endpoints \u2014 on/off/dim/color-temp per room"
+  },
+  {
+    "id": "tab-scenes",
+    "type": "tab",
+    "label": "Scenes",
+    "disabled": false,
+    "info": "Scene activation endpoints \u2014 morning/evening/night/away/welcome"
+  },
+  {
+    "id": "tab-heating",
+    "type": "tab",
+    "label": "Heating",
+    "disabled": false,
+    "info": "Heating control endpoints \u2014 thermostat setpoints and modes"
+  },
+  {
+    "id": "tab-cloud",
+    "type": "tab",
+    "label": "Cloud Sync",
+    "disabled": false,
+    "info": "Cloud synchronisation endpoints"
+  },
+  {
+    "id": "tab-dashboard",
+    "type": "tab",
+    "label": "Dashboard",
+    "disabled": false,
+    "info": "Dashboard UI wiring \u2014 connects device state to UI widgets"
+  },
+  {
+    "id": "ui-theme-dark",
+    "type": "ui-theme",
+    "name": "DHC Dark",
+    "colors": {
+      "surface": "#1e293b",
+      "primary": "#22c55e",
+      "bgPage": "#0f172a",
+      "groupBg": "#1e293b",
+      "groupOutline": "#0f172a"
+    },
+    "sizes": {
+      "density": "default",
+      "pagePadding": "12px",
+      "groupGap": "12px",
+      "groupBorderRadius": "12px",
+      "widgetGap": "12px"
+    }
+  },
+  {
+    "id": "tab-devices",
+    "type": "tab",
+    "label": "Devices",
+    "disabled": false,
+    "info": "Device inventory \u2014 sync from CCU + Hue, store in SQLite",
+    "env": []
+  },
+  {
+    "id": "sqlite-db",
+    "type": "sqlitedb",
+    "db": "/home/dhc-svc/digitalhome-edge/db/digitalhome.db",
+    "mode": "RWC"
+  },
+  {
+    "id": "dhc-ui-base",
+    "type": "ui-base",
+    "name": "digitalhome.edge",
+    "path": "/ui",
+    "appIcon": ""
+  },
+  {
+    "id": "ui-page-home",
+    "type": "ui-page",
+    "name": "Home",
+    "ui": "dhc-ui-base",
+    "path": "/home",
+    "icon": "home",
+    "layout": "grid",
+    "theme": "ui-theme-dark",
+    "order": 1,
+    "className": ""
+  },
+  {
+    "id": "ui-page-lights",
+    "type": "ui-page",
+    "name": "Lights",
+    "ui": "dhc-ui-base",
+    "path": "/lights",
+    "icon": "lightbulb",
+    "layout": "grid",
+    "theme": "ui-theme-dark",
+    "order": 2,
+    "className": ""
+  },
+  {
+    "id": "ui-page-heating",
+    "type": "ui-page",
+    "name": "Heating",
+    "ui": "dhc-ui-base",
+    "path": "/heating",
+    "icon": "thermostat",
+    "layout": "grid",
+    "theme": "ui-theme-dark",
+    "order": 3,
+    "className": ""
+  },
+  {
+    "id": "ui-page-scenes",
+    "type": "ui-page",
+    "name": "Scenes",
+    "ui": "dhc-ui-base",
+    "path": "/scenes",
+    "icon": "theater_comedy",
+    "layout": "grid",
+    "theme": "ui-theme-dark",
+    "order": 4,
+    "className": ""
+  },
+  {
+    "id": "ui-page-system",
+    "type": "ui-page",
+    "name": "System",
+    "ui": "dhc-ui-base",
+    "path": "/system",
+    "icon": "settings",
+    "layout": "grid",
+    "theme": "ui-theme-dark",
+    "order": 5,
+    "className": ""
+  },
+  {
+    "id": "ui-group-header",
+    "type": "ui-group",
+    "name": "Header",
+    "page": "ui-page-home",
+    "width": "6",
+    "height": "1",
+    "order": 1,
+    "showTitle": false,
+    "className": ""
+  },
+  {
+    "id": "ui-group-rooms",
+    "type": "ui-group",
+    "name": "Rooms",
+    "page": "ui-page-home",
+    "width": "6",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-quickactions",
+    "type": "ui-group",
+    "name": "Quick Actions",
+    "page": "ui-page-home",
+    "width": "6",
+    "height": "1",
+    "order": 3,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-living",
+    "type": "ui-group",
+    "name": "Living Room",
+    "page": "ui-page-lights",
+    "width": "3",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-kitchen",
+    "type": "ui-group",
+    "name": "Kitchen",
+    "page": "ui-page-lights",
+    "width": "3",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-bedroom",
+    "type": "ui-group",
+    "name": "Bedroom",
+    "page": "ui-page-lights",
+    "width": "3",
+    "height": "1",
+    "order": 3,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-bathroom",
+    "type": "ui-group",
+    "name": "Bathroom",
+    "page": "ui-page-lights",
+    "width": "3",
+    "height": "1",
+    "order": 4,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-entrance",
+    "type": "ui-group",
+    "name": "Entrance",
+    "page": "ui-page-lights",
+    "width": "3",
+    "height": "1",
+    "order": 5,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-office",
+    "type": "ui-group",
+    "name": "Office",
+    "page": "ui-page-lights",
+    "width": "3",
+    "height": "1",
+    "order": 6,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-thermo-living",
+    "type": "ui-group",
+    "name": "Living Room",
+    "page": "ui-page-heating",
+    "width": "3",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-thermo-kitchen",
+    "type": "ui-group",
+    "name": "Kitchen",
+    "page": "ui-page-heating",
+    "width": "3",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-thermo-bedroom",
+    "type": "ui-group",
+    "name": "Bedroom",
+    "page": "ui-page-heating",
+    "width": "3",
+    "height": "1",
+    "order": 3,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-thermo-bathroom",
+    "type": "ui-group",
+    "name": "Bathroom",
+    "page": "ui-page-heating",
+    "width": "3",
+    "height": "1",
+    "order": 4,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-heating-modes",
+    "type": "ui-group",
+    "name": "Modes",
+    "page": "ui-page-heating",
+    "width": "6",
+    "height": "1",
+    "order": 5,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-scenes",
+    "type": "ui-group",
+    "name": "Scenes",
+    "page": "ui-page-scenes",
+    "width": "6",
+    "height": "1",
+    "order": 1,
+    "showTitle": false,
+    "className": ""
+  },
+  {
+    "id": "ui-group-status",
+    "type": "ui-group",
+    "name": "Service Status",
+    "page": "ui-page-system",
+    "width": "6",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ui-group-devices",
+    "type": "ui-group",
+    "name": "Device Connectivity",
+    "page": "ui-page-system",
+    "width": "6",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "comment-state-header",
+    "type": "comment",
+    "z": "tab-state",
+    "name": "STATE / READ ENDPOINTS",
+    "info": "GET endpoints that return device and room state.\n/api/state/all is fully wired as a reference implementation.",
+    "x": 160,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "state-all-in",
+    "type": "http in",
+    "z": "tab-state",
+    "name": "/api/state/all",
+    "url": "/api/state/all",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 140,
+    "y": 120,
+    "wires": [
+      [
+        "state-all-ccu",
+        "state-all-hue"
+      ]
+    ]
+  },
+  {
+    "id": "state-all-ccu",
+    "type": "http request",
+    "z": "tab-state",
+    "name": "CCU: get devices",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://homematic-ccu/addons/xmlapi/statelist.cgi",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 380,
+    "y": 100,
+    "wires": [
+      [
+        "state-all-join"
+      ]
+    ]
+  },
+  {
+    "id": "state-all-hue",
+    "type": "http request",
+    "z": "tab-state",
+    "name": "Hue: get lights",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://hue-bridge/api/{{{global.hue_api_key}}}/lights",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 380,
+    "y": 140,
+    "wires": [
+      [
+        "state-all-join"
+      ]
+    ]
+  },
+  {
+    "id": "state-all-join",
+    "type": "join",
+    "z": "tab-state",
+    "name": "merge",
+    "mode": "custom",
+    "build": "object",
+    "property": "payload",
+    "propertyType": "msg",
+    "key": "topic",
+    "joiner": "\\n",
+    "joinerType": "str",
+    "accumulate": false,
+    "timeout": "5",
+    "count": "2",
+    "reduceRight": false,
+    "reduceExp": "",
+    "reduceInit": "",
+    "reduceInitType": "",
+    "reduceFixup": "",
+    "x": 570,
+    "y": 120,
+    "wires": [
+      [
+        "state-all-format"
+      ]
+    ]
+  },
+  {
+    "id": "state-all-format",
+    "type": "function",
+    "z": "tab-state",
+    "name": "format response",
+    "func": "msg.payload = {\n    status: \"ok\",\n    timestamp: new Date().toISOString(),\n    ccu: msg.payload.ccu || {},\n    hue: msg.payload.hue || {}\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 730,
+    "y": 120,
+    "wires": [
+      [
+        "state-all-out"
+      ]
+    ]
+  },
+  {
+    "id": "state-all-out",
+    "type": "http response",
+    "z": "tab-state",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 890,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "state-room-in",
+    "type": "http in",
+    "z": "tab-state",
+    "name": "/api/state/:room",
+    "url": "/api/state/:room",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 240,
+    "wires": [
+      [
+        "state-room-fn"
+      ]
+    ]
+  },
+  {
+    "id": "state-room-fn",
+    "type": "function",
+    "z": "tab-state",
+    "name": "TODO: filter by room",
+    "func": "// TODO: query CCU + Hue for devices in msg.req.params.room\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    devices: []\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 240,
+    "wires": [
+      [
+        "state-room-out"
+      ]
+    ]
+  },
+  {
+    "id": "state-room-out",
+    "type": "http response",
+    "z": "tab-state",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 610,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "heating-status-in",
+    "type": "http in",
+    "z": "tab-state",
+    "name": "/api/heating/status",
+    "url": "/api/heating/status",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 340,
+    "wires": [
+      [
+        "heating-status-fn"
+      ]
+    ]
+  },
+  {
+    "id": "heating-status-fn",
+    "type": "function",
+    "z": "tab-state",
+    "name": "TODO: read thermostats",
+    "func": "// TODO: query CCU for all thermostat setpoints + current temps\nmsg.payload = {\n    status: \"ok\",\n    thermostats: []\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 340,
+    "wires": [
+      [
+        "heating-status-out"
+      ]
+    ]
+  },
+  {
+    "id": "heating-status-out",
+    "type": "http response",
+    "z": "tab-state",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 630,
+    "y": 340,
+    "wires": []
+  },
+  {
+    "id": "comment-lights-header",
+    "type": "comment",
+    "z": "tab-lights",
+    "name": "LIGHT CONTROL ENDPOINTS",
+    "info": "POST endpoints for per-room light control.\nRoom param: living-room, kitchen, bedroom, bathroom, entrance, office",
+    "x": 170,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "lights-on-in",
+    "type": "http in",
+    "z": "tab-lights",
+    "name": "/api/lights/:room/on",
+    "url": "/api/lights/:room/on",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 120,
+    "wires": [
+      [
+        "lights-on-fn"
+      ]
+    ]
+  },
+  {
+    "id": "lights-on-fn",
+    "type": "function",
+    "z": "tab-lights",
+    "name": "TODO: turn on lights",
+    "func": "// TODO: send ON command to Hue lights in msg.req.params.room\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"on\"\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 120,
+    "wires": [
+      [
+        "lights-on-out"
+      ]
+    ]
+  },
+  {
+    "id": "lights-on-out",
+    "type": "http response",
+    "z": "tab-lights",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 610,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "lights-off-in",
+    "type": "http in",
+    "z": "tab-lights",
+    "name": "/api/lights/:room/off",
+    "url": "/api/lights/:room/off",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 200,
+    "wires": [
+      [
+        "lights-off-fn"
+      ]
+    ]
+  },
+  {
+    "id": "lights-off-fn",
+    "type": "function",
+    "z": "tab-lights",
+    "name": "TODO: turn off lights",
+    "func": "// TODO: send OFF command to Hue lights in msg.req.params.room\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"off\"\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 200,
+    "wires": [
+      [
+        "lights-off-out"
+      ]
+    ]
+  },
+  {
+    "id": "lights-off-out",
+    "type": "http response",
+    "z": "tab-lights",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 610,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "lights-dim-in",
+    "type": "http in",
+    "z": "tab-lights",
+    "name": "/api/lights/:room/dim",
+    "url": "/api/lights/:room/dim",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 280,
+    "wires": [
+      [
+        "lights-dim-fn"
+      ]
+    ]
+  },
+  {
+    "id": "lights-dim-fn",
+    "type": "function",
+    "z": "tab-lights",
+    "name": "TODO: set brightness",
+    "func": "// TODO: set Hue brightness to msg.payload.level (0-100)\nconst level = msg.payload.level || 0;\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"dim\",\n    level: level\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 280,
+    "wires": [
+      [
+        "lights-dim-out"
+      ]
+    ]
+  },
+  {
+    "id": "lights-dim-out",
+    "type": "http response",
+    "z": "tab-lights",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 610,
+    "y": 280,
+    "wires": []
+  },
+  {
+    "id": "lights-ct-in",
+    "type": "http in",
+    "z": "tab-lights",
+    "name": "/api/lights/:room/color-temp",
+    "url": "/api/lights/:room/color-temp",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 180,
+    "y": 360,
+    "wires": [
+      [
+        "lights-ct-fn"
+      ]
+    ]
+  },
+  {
+    "id": "lights-ct-fn",
+    "type": "function",
+    "z": "tab-lights",
+    "name": "TODO: set color temp",
+    "func": "// TODO: set Hue color temperature to msg.payload.ct (153-500)\nconst ct = msg.payload.ct || 300;\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"color-temp\",\n    ct: ct\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 420,
+    "y": 360,
+    "wires": [
+      [
+        "lights-ct-out"
+      ]
+    ]
+  },
+  {
+    "id": "lights-ct-out",
+    "type": "http response",
+    "z": "tab-lights",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 630,
+    "y": 360,
+    "wires": []
+  },
+  {
+    "id": "comment-scenes-header",
+    "type": "comment",
+    "z": "tab-scenes",
+    "name": "SCENE ENDPOINTS",
+    "info": "POST endpoints to activate predefined scenes.\nEach scene triggers a combination of light and heating actions.",
+    "x": 140,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "scene-morning-in",
+    "type": "http in",
+    "z": "tab-scenes",
+    "name": "/api/scene/morning",
+    "url": "/api/scene/morning",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 120,
+    "wires": [
+      [
+        "scene-morning-fn"
+      ]
+    ]
+  },
+  {
+    "id": "scene-morning-fn",
+    "type": "function",
+    "z": "tab-scenes",
+    "name": "TODO: morning routine",
+    "func": "// TODO: gradual warm light, comfort heating\nmsg.payload = { status: \"ok\", scene: \"morning\" };\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 120,
+    "wires": [
+      [
+        "scene-morning-out"
+      ]
+    ]
+  },
+  {
+    "id": "scene-morning-out",
+    "type": "http response",
+    "z": "tab-scenes",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 630,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "scene-evening-in",
+    "type": "http in",
+    "z": "tab-scenes",
+    "name": "/api/scene/evening",
+    "url": "/api/scene/evening",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 200,
+    "wires": [
+      [
+        "scene-evening-fn"
+      ]
+    ]
+  },
+  {
+    "id": "scene-evening-fn",
+    "type": "function",
+    "z": "tab-scenes",
+    "name": "TODO: evening routine",
+    "func": "// TODO: warm dimmed lights\nmsg.payload = { status: \"ok\", scene: \"evening\" };\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 200,
+    "wires": [
+      [
+        "scene-evening-out"
+      ]
+    ]
+  },
+  {
+    "id": "scene-evening-out",
+    "type": "http response",
+    "z": "tab-scenes",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 630,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "scene-night-in",
+    "type": "http in",
+    "z": "tab-scenes",
+    "name": "/api/scene/night",
+    "url": "/api/scene/night",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 280,
+    "wires": [
+      [
+        "scene-night-fn"
+      ]
+    ]
+  },
+  {
+    "id": "scene-night-fn",
+    "type": "function",
+    "z": "tab-scenes",
+    "name": "TODO: night mode",
+    "func": "// TODO: minimal light\nmsg.payload = { status: \"ok\", scene: \"night\" };\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 280,
+    "wires": [
+      [
+        "scene-night-out"
+      ]
+    ]
+  },
+  {
+    "id": "scene-night-out",
+    "type": "http response",
+    "z": "tab-scenes",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 610,
+    "y": 280,
+    "wires": []
+  },
+  {
+    "id": "scene-away-in",
+    "type": "http in",
+    "z": "tab-scenes",
+    "name": "/api/scene/away",
+    "url": "/api/scene/away",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 360,
+    "wires": [
+      [
+        "scene-away-fn"
+      ]
+    ]
+  },
+  {
+    "id": "scene-away-fn",
+    "type": "function",
+    "z": "tab-scenes",
+    "name": "TODO: away mode",
+    "func": "// TODO: all lights off + security mode\nmsg.payload = { status: \"ok\", scene: \"away\" };\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 360,
+    "wires": [
+      [
+        "scene-away-out"
+      ]
+    ]
+  },
+  {
+    "id": "scene-away-out",
+    "type": "http response",
+    "z": "tab-scenes",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 610,
+    "y": 360,
+    "wires": []
+  },
+  {
+    "id": "scene-welcome-in",
+    "type": "http in",
+    "z": "tab-scenes",
+    "name": "/api/scene/welcome",
+    "url": "/api/scene/welcome",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 440,
+    "wires": [
+      [
+        "scene-welcome-fn"
+      ]
+    ]
+  },
+  {
+    "id": "scene-welcome-fn",
+    "type": "function",
+    "z": "tab-scenes",
+    "name": "TODO: welcome",
+    "func": "// TODO: entrance lights on\nmsg.payload = { status: \"ok\", scene: \"welcome\" };\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 440,
+    "wires": [
+      [
+        "scene-welcome-out"
+      ]
+    ]
+  },
+  {
+    "id": "scene-welcome-out",
+    "type": "http response",
+    "z": "tab-scenes",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 620,
+    "y": 440,
+    "wires": []
+  },
+  {
+    "id": "comment-heating-header",
+    "type": "comment",
+    "z": "tab-heating",
+    "name": "HEATING CONTROL ENDPOINTS",
+    "info": "POST endpoints for thermostat control via Homematic CCU.\nRoom param: living-room, kitchen, bedroom, bathroom, entrance, office",
+    "x": 170,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "heating-set-in",
+    "type": "http in",
+    "z": "tab-heating",
+    "name": "/api/heating/:room/set",
+    "url": "/api/heating/:room/set",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 170,
+    "y": 120,
+    "wires": [
+      [
+        "heating-set-fn"
+      ]
+    ]
+  },
+  {
+    "id": "heating-set-fn",
+    "type": "function",
+    "z": "tab-heating",
+    "name": "TODO: set thermostat",
+    "func": "// TODO: set CCU thermostat setpoint to msg.payload.temp\nconst temp = msg.payload.temp || 20;\nmsg.payload = {\n    status: \"ok\",\n    room: msg.req.params.room,\n    action: \"set\",\n    temp: temp\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 120,
+    "wires": [
+      [
+        "heating-set-out"
+      ]
+    ]
+  },
+  {
+    "id": "heating-set-out",
+    "type": "http response",
+    "z": "tab-heating",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 630,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "heating-eco-in",
+    "type": "http in",
+    "z": "tab-heating",
+    "name": "/api/heating/eco",
+    "url": "/api/heating/eco",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 220,
+    "wires": [
+      [
+        "heating-eco-fn"
+      ]
+    ]
+  },
+  {
+    "id": "heating-eco-fn",
+    "type": "function",
+    "z": "tab-heating",
+    "name": "TODO: eco mode",
+    "func": "// TODO: set all CCU thermostats to eco setpoint\nmsg.payload = { status: \"ok\", action: \"eco\" };\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 220,
+    "wires": [
+      [
+        "heating-eco-out"
+      ]
+    ]
+  },
+  {
+    "id": "heating-eco-out",
+    "type": "http response",
+    "z": "tab-heating",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 610,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "heating-comfort-in",
+    "type": "http in",
+    "z": "tab-heating",
+    "name": "/api/heating/comfort",
+    "url": "/api/heating/comfort",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 300,
+    "wires": [
+      [
+        "heating-comfort-fn"
+      ]
+    ]
+  },
+  {
+    "id": "heating-comfort-fn",
+    "type": "function",
+    "z": "tab-heating",
+    "name": "TODO: comfort mode",
+    "func": "// TODO: set all CCU thermostats to comfort setpoint\nmsg.payload = { status: \"ok\", action: \"comfort\" };\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 300,
+    "wires": [
+      [
+        "heating-comfort-out"
+      ]
+    ]
+  },
+  {
+    "id": "heating-comfort-out",
+    "type": "http response",
+    "z": "tab-heating",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 630,
+    "y": 300,
+    "wires": []
+  },
+  {
+    "id": "comment-cloud-header",
+    "type": "comment",
+    "z": "tab-cloud",
+    "name": "CLOUD SYNC ENDPOINTS",
+    "info": "Endpoints for synchronising state with digitalhome.cloud",
+    "x": 160,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "cloud-sync-in",
+    "type": "http in",
+    "z": "tab-cloud",
+    "name": "/api/cloud/sync",
+    "url": "/api/cloud/sync",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 120,
+    "wires": [
+      [
+        "cloud-sync-fn"
+      ]
+    ]
+  },
+  {
+    "id": "cloud-sync-fn",
+    "type": "function",
+    "z": "tab-cloud",
+    "name": "TODO: push state to cloud",
+    "func": "// TODO: collect full state snapshot, POST to digitalhome.cloud API\nmsg.payload = { status: \"ok\", action: \"cloud-sync\" };\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 120,
+    "wires": [
+      [
+        "cloud-sync-out"
+      ]
+    ]
+  },
+  {
+    "id": "cloud-sync-out",
+    "type": "http response",
+    "z": "tab-cloud",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 630,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "comment-dashboard-header",
+    "type": "comment",
+    "z": "tab-dashboard",
+    "name": "DASHBOARD UI WIRING",
+    "info": "Dashboard widgets that connect to the API flows.\nUI served at :1880/ui",
+    "x": 150,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "dhc-global-css",
+    "type": "ui-template",
+    "z": "tab-dashboard",
+    "page": "",
+    "ui": "dhc-ui-base",
+    "name": "DHC Global CSS",
+    "order": 0,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "format": "/* === DHC Design Language \u2014 Global Overrides === */\n\n/* Page background */\n.v-main { background-color: #0f172a !important; }\n\n/* Navigation drawer / sidebar */\n.v-navigation-drawer {\n  background-color: #1e293b !important;\n  border-right: 1px solid rgba(148, 163, 184, 0.3) !important;\n}\n.v-navigation-drawer .v-list-item-title {\n  color: #cbd5f5 !important;\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif !important;\n  font-size: 0.85rem !important;\n}\n.v-navigation-drawer .v-list-item--active {\n  background: rgba(34, 197, 94, 0.12) !important;\n}\n.v-navigation-drawer .v-list-item--active .v-list-item-title {\n  color: #4ade80 !important;\n}\n\n/* App bar / header */\n.v-app-bar {\n  background: rgba(15, 23, 42, 0.9) !important;\n  backdrop-filter: blur(10px) !important;\n  -webkit-backdrop-filter: blur(10px) !important;\n  border-bottom: 1px solid rgba(148, 163, 184, 0.3) !important;\n}\n.v-app-bar .v-toolbar-title { color: #e2e8f0 !important; }\n\n/* Group cards \u2014 radial gradient like DHC cards */\n.nrdb-ui-group {\n  background: radial-gradient(circle at top left, #1e293b, #020617) !important;\n  border: 1px solid rgba(148, 163, 184, 0.3) !important;\n  border-radius: 12px !important;\n}\n.nrdb-ui-group .v-card-title,\n.nrdb-ui-group .nrdb-ui-group-title {\n  color: #94a3b8 !important;\n  text-transform: uppercase !important;\n  letter-spacing: 0.05em !important;\n  font-size: 0.75rem !important;\n  font-weight: 600 !important;\n}\n\n/* Primary text within groups */\n.nrdb-ui-group .v-card-text { color: #e5e7eb !important; }\n\n/* Buttons \u2014 pill shape */\n.v-btn {\n  border-radius: 999px !important;\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif !important;\n  font-weight: 500 !important;\n  letter-spacing: 0.02em !important;\n}\n\n/* Switch styling */\n.v-switch .v-switch__track { opacity: 0.7 !important; }\n\n/* Text inputs \u2014 deep surface background */\n.v-field {\n  background-color: #020617 !important;\n  border-radius: 8px !important;\n}\n.v-field input { color: #e5e7eb !important; }\n.v-field--focused { border-color: #22c55e !important; }\n\n/* Labels and secondary text */\n.v-label { color: #9ca3af !important; }\n\n/* Slider thumb and track */\n.v-slider-thumb { color: #22c55e !important; }\n\n/* Notification styling */\n.v-snackbar__content {\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif !important;\n}\n\n/* Scrollbar styling */\n::-webkit-scrollbar { width: 6px; }\n::-webkit-scrollbar-track { background: #020617; }\n::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }\n::-webkit-scrollbar-thumb:hover { background: #334155; }\n\n/* System font globally */\nbody, .v-application {\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif !important;\n}",
+    "storeOutMessages": false,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "global",
+    "className": "",
+    "x": 400,
+    "y": 60,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "ui-header",
+    "type": "ui-template",
+    "z": "tab-dashboard",
+    "group": "ui-group-header",
+    "name": "Header",
+    "order": 1,
+    "width": "6",
+    "height": "1",
+    "head": "",
+    "format": "<template>\n  <div style=\"display:flex; align-items:center; gap:12px; padding:8px 0;\">\n    <div style=\"width:36px; height:36px; border-radius:8px;\n         background:linear-gradient(135deg, #22c55e, #0ea5e9);\n         display:flex; align-items:center; justify-content:center;\">\n      <span style=\"font-size:18px; font-weight:700; color:#fff;\">d</span>\n    </div>\n    <div>\n      <div style=\"font-size:1.1rem; font-weight:600; color:#e2e8f0;\">\n        digitalhome.edge\n      </div>\n      <div style=\"font-size:0.7rem; color:#94a3b8; letter-spacing:0.05em;\n           text-transform:uppercase;\">\n        Stage Server\n      </div>\n    </div>\n  </div>\n</template>",
+    "storeOutMessages": false,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 160,
+    "y": 120,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "ui-scene-morning",
+    "type": "ui-button",
+    "z": "tab-dashboard",
+    "group": "ui-group-quickactions",
+    "name": "Morning",
+    "label": "Morning",
+    "order": 1,
+    "width": "2",
+    "height": "1",
+    "passthru": false,
+    "tooltip": "Activate morning scene",
+    "color": "#fce7f3",
+    "bgcolor": "rgba(236, 72, 153, 0.2)",
+    "className": "",
+    "icon": "mdi-weather-sunset-up",
+    "payload": "{}",
+    "payloadType": "json",
+    "topic": "morning",
+    "textColor": "",
+    "x": 160,
+    "y": 200,
+    "wires": [
+      [
+        "ui-scene-morning-req"
+      ]
+    ]
+  },
+  {
+    "id": "ui-scene-morning-req",
+    "type": "http request",
+    "z": "tab-dashboard",
+    "name": "POST /api/scene/morning",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://localhost:1880/api/scene/morning",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 400,
+    "y": 200,
+    "wires": [
+      [
+        "ui-scene-notify"
+      ]
+    ]
+  },
+  {
+    "id": "ui-scene-evening",
+    "type": "ui-button",
+    "z": "tab-dashboard",
+    "group": "ui-group-quickactions",
+    "name": "Evening",
+    "label": "Evening",
+    "order": 2,
+    "width": "2",
+    "height": "1",
+    "passthru": false,
+    "tooltip": "Activate evening scene",
+    "color": "#fce7f3",
+    "bgcolor": "rgba(236, 72, 153, 0.2)",
+    "className": "",
+    "icon": "mdi-weather-sunset-down",
+    "payload": "{}",
+    "payloadType": "json",
+    "topic": "evening",
+    "textColor": "",
+    "x": 160,
+    "y": 260,
+    "wires": [
+      [
+        "ui-scene-evening-req"
+      ]
+    ]
+  },
+  {
+    "id": "ui-scene-evening-req",
+    "type": "http request",
+    "z": "tab-dashboard",
+    "name": "POST /api/scene/evening",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://localhost:1880/api/scene/evening",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 400,
+    "y": 260,
+    "wires": [
+      [
+        "ui-scene-notify"
+      ]
+    ]
+  },
+  {
+    "id": "ui-scene-night",
+    "type": "ui-button",
+    "z": "tab-dashboard",
+    "group": "ui-group-quickactions",
+    "name": "Night",
+    "label": "Night",
+    "order": 3,
+    "width": "2",
+    "height": "1",
+    "passthru": false,
+    "tooltip": "Activate night scene",
+    "color": "#fce7f3",
+    "bgcolor": "rgba(236, 72, 153, 0.2)",
+    "className": "",
+    "icon": "mdi-weather-night",
+    "payload": "{}",
+    "payloadType": "json",
+    "topic": "night",
+    "textColor": "",
+    "x": 160,
+    "y": 320,
+    "wires": [
+      [
+        "ui-scene-night-req"
+      ]
+    ]
+  },
+  {
+    "id": "ui-scene-night-req",
+    "type": "http request",
+    "z": "tab-dashboard",
+    "name": "POST /api/scene/night",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://localhost:1880/api/scene/night",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 400,
+    "y": 320,
+    "wires": [
+      [
+        "ui-scene-notify"
+      ]
+    ]
+  },
+  {
+    "id": "ui-scene-notify",
+    "type": "ui-notification",
+    "z": "tab-dashboard",
+    "ui": "dhc-ui-base",
+    "position": "top right",
+    "colorDefault": true,
+    "color": "#000000",
+    "displayTime": "3",
+    "showCountdown": true,
+    "outputs": 0,
+    "allowDismiss": true,
+    "dismissText": "",
+    "raw": false,
+    "className": "",
+    "name": "Scene activated",
+    "x": 640,
+    "y": 260,
+    "wires": []
+  },
+  {
+    "id": "ui-light-living-switch",
+    "type": "ui-switch",
+    "z": "tab-dashboard",
+    "group": "ui-group-living",
+    "name": "Light",
+    "label": "Light",
+    "order": 1,
+    "width": "3",
+    "height": "1",
+    "passthru": false,
+    "decouple": false,
+    "topic": "living-room",
+    "topicType": "str",
+    "style": "",
+    "className": "",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "mdi-lightbulb-on",
+    "oncolor": "#fbbf24",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "mdi-lightbulb-off-outline",
+    "offcolor": "#64748b",
+    "x": 150,
+    "y": 420,
+    "wires": [
+      [
+        "ui-light-living-action"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-living-action",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "on/off request",
+    "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 330,
+    "y": 420,
+    "wires": [
+      [
+        "ui-light-request"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-kitchen-switch",
+    "type": "ui-switch",
+    "z": "tab-dashboard",
+    "group": "ui-group-kitchen",
+    "name": "Light",
+    "label": "Light",
+    "order": 1,
+    "width": "3",
+    "height": "1",
+    "passthru": false,
+    "decouple": false,
+    "topic": "kitchen",
+    "topicType": "str",
+    "style": "",
+    "className": "",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "mdi-lightbulb-on",
+    "oncolor": "#fbbf24",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "mdi-lightbulb-off-outline",
+    "offcolor": "#64748b",
+    "x": 150,
+    "y": 480,
+    "wires": [
+      [
+        "ui-light-kitchen-action"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-kitchen-action",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "on/off request",
+    "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 330,
+    "y": 480,
+    "wires": [
+      [
+        "ui-light-request"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-bedroom-switch",
+    "type": "ui-switch",
+    "z": "tab-dashboard",
+    "group": "ui-group-bedroom",
+    "name": "Light",
+    "label": "Light",
+    "order": 1,
+    "width": "3",
+    "height": "1",
+    "passthru": false,
+    "decouple": false,
+    "topic": "bedroom",
+    "topicType": "str",
+    "style": "",
+    "className": "",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "mdi-lightbulb-on",
+    "oncolor": "#fbbf24",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "mdi-lightbulb-off-outline",
+    "offcolor": "#64748b",
+    "x": 150,
+    "y": 540,
+    "wires": [
+      [
+        "ui-light-bedroom-action"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-bedroom-action",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "on/off request",
+    "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 330,
+    "y": 540,
+    "wires": [
+      [
+        "ui-light-request"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-bathroom-switch",
+    "type": "ui-switch",
+    "z": "tab-dashboard",
+    "group": "ui-group-bathroom",
+    "name": "Light",
+    "label": "Light",
+    "order": 1,
+    "width": "3",
+    "height": "1",
+    "passthru": false,
+    "decouple": false,
+    "topic": "bathroom",
+    "topicType": "str",
+    "style": "",
+    "className": "",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "mdi-lightbulb-on",
+    "oncolor": "#fbbf24",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "mdi-lightbulb-off-outline",
+    "offcolor": "#64748b",
+    "x": 150,
+    "y": 600,
+    "wires": [
+      [
+        "ui-light-bathroom-action"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-bathroom-action",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "on/off request",
+    "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 330,
+    "y": 600,
+    "wires": [
+      [
+        "ui-light-request"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-entrance-switch",
+    "type": "ui-switch",
+    "z": "tab-dashboard",
+    "group": "ui-group-entrance",
+    "name": "Light",
+    "label": "Light",
+    "order": 1,
+    "width": "3",
+    "height": "1",
+    "passthru": false,
+    "decouple": false,
+    "topic": "entrance",
+    "topicType": "str",
+    "style": "",
+    "className": "",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "mdi-lightbulb-on",
+    "oncolor": "#fbbf24",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "mdi-lightbulb-off-outline",
+    "offcolor": "#64748b",
+    "x": 150,
+    "y": 660,
+    "wires": [
+      [
+        "ui-light-entrance-action"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-entrance-action",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "on/off request",
+    "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 330,
+    "y": 660,
+    "wires": [
+      [
+        "ui-light-request"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-office-switch",
+    "type": "ui-switch",
+    "z": "tab-dashboard",
+    "group": "ui-group-office",
+    "name": "Light",
+    "label": "Light",
+    "order": 1,
+    "width": "3",
+    "height": "1",
+    "passthru": false,
+    "decouple": false,
+    "topic": "office",
+    "topicType": "str",
+    "style": "",
+    "className": "",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "mdi-lightbulb-on",
+    "oncolor": "#fbbf24",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "mdi-lightbulb-off-outline",
+    "offcolor": "#64748b",
+    "x": 150,
+    "y": 720,
+    "wires": [
+      [
+        "ui-light-office-action"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-office-action",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "on/off request",
+    "func": "const room = msg.topic;\nconst action = msg.payload ? 'on' : 'off';\nmsg.url = `http://localhost:1880/api/lights/${room}/${action}`;\nmsg.method = 'POST';\nmsg.payload = {};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 330,
+    "y": 720,
+    "wires": [
+      [
+        "ui-light-request"
+      ]
+    ]
+  },
+  {
+    "id": "ui-light-request",
+    "type": "http request",
+    "z": "tab-dashboard",
+    "name": "call API",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 530,
+    "y": 560,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "ui-heat-eco",
+    "type": "ui-button",
+    "z": "tab-dashboard",
+    "group": "ui-group-heating-modes",
+    "name": "Eco",
+    "label": "Eco Mode",
+    "order": 1,
+    "width": "3",
+    "height": "1",
+    "passthru": false,
+    "tooltip": "Set all thermostats to eco",
+    "color": "#bbf7d0",
+    "bgcolor": "rgba(34, 197, 94, 0.2)",
+    "className": "",
+    "icon": "mdi-leaf",
+    "payload": "{}",
+    "payloadType": "json",
+    "topic": "eco",
+    "textColor": "",
+    "x": 160,
+    "y": 800,
+    "wires": [
+      [
+        "ui-heat-eco-req"
+      ]
+    ]
+  },
+  {
+    "id": "ui-heat-eco-req",
+    "type": "http request",
+    "z": "tab-dashboard",
+    "name": "POST /api/heating/eco",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://localhost:1880/api/heating/eco",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 390,
+    "y": 800,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "ui-heat-comfort",
+    "type": "ui-button",
+    "z": "tab-dashboard",
+    "group": "ui-group-heating-modes",
+    "name": "Comfort",
+    "label": "Comfort Mode",
+    "order": 2,
+    "width": "3",
+    "height": "1",
+    "passthru": false,
+    "tooltip": "Set all thermostats to comfort",
+    "color": "#fecaca",
+    "bgcolor": "rgba(239, 68, 68, 0.2)",
+    "className": "",
+    "icon": "mdi-fire",
+    "payload": "{}",
+    "payloadType": "json",
+    "topic": "comfort",
+    "textColor": "",
+    "x": 170,
+    "y": 860,
+    "wires": [
+      [
+        "ui-heat-comfort-req"
+      ]
+    ]
+  },
+  {
+    "id": "ui-heat-comfort-req",
+    "type": "http request",
+    "z": "tab-dashboard",
+    "name": "POST /api/heating/comfort",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://localhost:1880/api/heating/comfort",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 410,
+    "y": 860,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "ui-cloud-sync-btn",
+    "type": "ui-button",
+    "z": "tab-dashboard",
+    "group": "ui-group-status",
+    "name": "Sync",
+    "label": "Sync to Cloud",
+    "order": 1,
+    "width": "3",
+    "height": "1",
+    "passthru": false,
+    "tooltip": "Push state to digitalhome.cloud",
+    "color": "#93c5fd",
+    "bgcolor": "rgba(59, 130, 246, 0.2)",
+    "className": "",
+    "icon": "mdi-cloud-upload",
+    "payload": "{}",
+    "payloadType": "json",
+    "topic": "sync",
+    "textColor": "",
+    "x": 160,
+    "y": 940,
+    "wires": [
+      [
+        "ui-cloud-sync-req"
+      ]
+    ]
+  },
+  {
+    "id": "ui-cloud-sync-req",
+    "type": "http request",
+    "z": "tab-dashboard",
+    "name": "POST /api/cloud/sync",
+    "method": "POST",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://localhost:1880/api/cloud/sync",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 400,
+    "y": 940,
+    "wires": [
+      [
+        "ui-cloud-sync-status"
+      ]
+    ]
+  },
+  {
+    "id": "ui-cloud-sync-status",
+    "type": "ui-text",
+    "z": "tab-dashboard",
+    "group": "ui-group-status",
+    "name": "Last sync",
+    "label": "Last sync",
+    "order": 2,
+    "width": "3",
+    "height": "1",
+    "format": "{{msg.payload.status}} \u2014 {{msg.payload.action}}",
+    "className": "",
+    "style": false,
+    "font": "",
+    "fontSize": 14,
+    "color": "#94a3b8",
+    "x": 620,
+    "y": 940,
+    "wires": []
+  },
+  {
+    "id": "sys-status-inject",
+    "type": "inject",
+    "z": "tab-dashboard",
+    "name": "Every 30s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "30",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 160,
+    "y": 1040,
+    "wires": [
+      [
+        "sys-status-check"
+      ]
+    ]
+  },
+  {
+    "id": "sys-status-check",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "Build status requests",
+    "func": "// Fan out to check each service/device\n// Output 1: MCP server check\n// Output 2: Hue bridge check\n// Output 3: CCU check\nconst mcp = { url: 'http://localhost:8000/', method: 'GET', requestTimeout: 3000 };\nconst hue = { url: 'http://hue-bridge/api/config', method: 'GET', requestTimeout: 3000 };\nconst ccu = { url: 'http://homematic-ccu/addons/xmlapi/version.cgi', method: 'GET', requestTimeout: 3000 };\nreturn [mcp, hue, ccu];",
+    "outputs": 3,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 370,
+    "y": 1040,
+    "wires": [
+      [
+        "sys-mcp-req"
+      ],
+      [
+        "sys-hue-req"
+      ],
+      [
+        "sys-ccu-req"
+      ]
+    ]
+  },
+  {
+    "id": "sys-mcp-req",
+    "type": "http request",
+    "z": "tab-dashboard",
+    "name": "MCP server",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 570,
+    "y": 1000,
+    "wires": [
+      [
+        "sys-status-merge"
+      ]
+    ]
+  },
+  {
+    "id": "sys-hue-req",
+    "type": "http request",
+    "z": "tab-dashboard",
+    "name": "Hue bridge",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 570,
+    "y": 1040,
+    "wires": [
+      [
+        "sys-status-merge"
+      ]
+    ]
+  },
+  {
+    "id": "sys-ccu-req",
+    "type": "http request",
+    "z": "tab-dashboard",
+    "name": "CCU",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 570,
+    "y": 1080,
+    "wires": [
+      [
+        "sys-status-merge"
+      ]
+    ]
+  },
+  {
+    "id": "sys-status-merge",
+    "type": "join",
+    "z": "tab-dashboard",
+    "name": "merge 3",
+    "mode": "custom",
+    "build": "array",
+    "property": "payload",
+    "propertyType": "msg",
+    "key": "topic",
+    "joiner": "\\n",
+    "joinerType": "str",
+    "accumulate": false,
+    "timeout": "5",
+    "count": "3",
+    "reduceRight": false,
+    "reduceExp": "",
+    "reduceInit": "",
+    "reduceInitType": "",
+    "reduceFixup": "",
+    "x": 730,
+    "y": 1040,
+    "wires": [
+      [
+        "sys-status-format"
+      ]
+    ]
+  },
+  {
+    "id": "sys-status-format",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "Format status",
+    "func": "// msg.payload is array of 3 responses [mcp, hue, ccu]\n// Each has statusCode (200 = ok, or undefined/error)\nconst results = msg.payload || [];\nconst now = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit', second:'2-digit'});\n\nfunction check(resp, i) {\n    if (resp && resp.statusCode && resp.statusCode >= 200 && resp.statusCode < 400) {\n        return { status: 'online', code: resp.statusCode };\n    }\n    return { status: 'offline', code: resp ? resp.statusCode || 'err' : 'err' };\n}\n\n// Node-RED is always online if this flow is running\nconst nodered = { status: 'online' };\nconst mcp = check(results[0], 0);\nconst hue = check(results[1], 1);\nconst ccu = check(results[2], 2);\n\nmsg.payload = {\n    timestamp: now,\n    services: {\n        nodered: nodered,\n        mcp: mcp\n    },\n    devices: {\n        hue: hue,\n        ccu: ccu\n    }\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 890,
+    "y": 1040,
+    "wires": [
+      [
+        "sys-status-widget",
+        "sys-devices-widget"
+      ]
+    ]
+  },
+  {
+    "id": "sys-status-widget",
+    "type": "ui-template",
+    "z": "tab-dashboard",
+    "group": "ui-group-status",
+    "name": "Service Status",
+    "order": 1,
+    "width": "6",
+    "height": "1",
+    "head": "",
+    "format": "<template>\n  <div style=\"padding:4px 0;\">\n    <div v-for=\"(svc, name) in msg?.payload?.services\" :key=\"name\"\n         style=\"display:flex; align-items:center; gap:10px; padding:6px 0;\n                border-bottom:1px solid rgba(148,163,184,0.15);\">\n      <div :style=\"{\n        width:'10px', height:'10px', borderRadius:'50%',\n        background: svc.status === 'online' ? '#22c55e' : '#ef4444',\n        boxShadow: svc.status === 'online' ? '0 0 6px #22c55e' : '0 0 6px #ef4444'\n      }\"></div>\n      <span style=\"color:#e5e7eb; font-size:0.85rem; font-weight:500; min-width:120px;\">\n        {{ name === 'nodered' ? 'Node-RED' : name === 'mcp' ? 'MCP Server' : name }}\n      </span>\n      <span :style=\"{\n        fontSize:'0.7rem', fontWeight:600, letterSpacing:'0.05em', textTransform:'uppercase',\n        padding:'2px 8px', borderRadius:'999px',\n        background: svc.status === 'online' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',\n        color: svc.status === 'online' ? '#4ade80' : '#fca5a5',\n        border: svc.status === 'online' ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(239,68,68,0.4)'\n      }\">\n        {{ svc.status }}\n      </span>\n    </div>\n    <div style=\"color:#64748b; font-size:0.65rem; padding-top:6px; text-align:right;\">\n      Updated {{ msg?.payload?.timestamp }}\n    </div>\n  </div>\n</template>",
+    "storeOutMessages": true,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1070,
+    "y": 1020,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sys-devices-widget",
+    "type": "ui-template",
+    "z": "tab-dashboard",
+    "group": "ui-group-devices",
+    "name": "Device Connectivity",
+    "order": 1,
+    "width": "6",
+    "height": "1",
+    "head": "",
+    "format": "<template>\n  <div style=\"padding:4px 0;\">\n    <div v-for=\"(dev, name) in msg?.payload?.devices\" :key=\"name\"\n         style=\"display:flex; align-items:center; gap:10px; padding:6px 0;\n                border-bottom:1px solid rgba(148,163,184,0.15);\">\n      <div :style=\"{\n        width:'10px', height:'10px', borderRadius:'50%',\n        background: dev.status === 'online' ? '#22c55e' : '#ef4444',\n        boxShadow: dev.status === 'online' ? '0 0 6px #22c55e' : '0 0 6px #ef4444'\n      }\"></div>\n      <span style=\"color:#e5e7eb; font-size:0.85rem; font-weight:500; min-width:120px;\">\n        {{ name === 'hue' ? 'Hue Bridge' : name === 'ccu' ? 'Homematic CCU' : name }}\n      </span>\n      <span :style=\"{\n        fontSize:'0.7rem', fontWeight:600, letterSpacing:'0.05em', textTransform:'uppercase',\n        padding:'2px 8px', borderRadius:'999px',\n        background: dev.status === 'online' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',\n        color: dev.status === 'online' ? '#4ade80' : '#fca5a5',\n        border: dev.status === 'online' ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(239,68,68,0.4)'\n      }\">\n        {{ dev.status }}\n      </span>\n    </div>\n    <div style=\"color:#64748b; font-size:0.65rem; padding-top:6px; text-align:right;\">\n      Updated {{ msg?.payload?.timestamp }}\n    </div>\n  </div>\n</template>",
+    "storeOutMessages": true,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1070,
+    "y": 1060,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "comment-devices",
+    "type": "comment",
+    "z": "tab-devices",
+    "name": "DEVICE INVENTORY ENDPOINTS",
+    "info": "",
+    "x": 200,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "dev-list-in",
+    "type": "http in",
+    "z": "tab-devices",
+    "name": "/api/devices",
+    "url": "/api/devices",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 150,
+    "y": 120,
+    "wires": [
+      [
+        "dev-list-fn"
+      ]
+    ]
+  },
+  {
+    "id": "dev-list-fn",
+    "type": "function",
+    "z": "tab-devices",
+    "name": "SELECT all",
+    "func": "msg.topic = 'SELECT * FROM device ORDER BY design_view, dhc_class, name';\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 120,
+    "wires": [
+      [
+        "dev-list-sql"
+      ]
+    ]
+  },
+  {
+    "id": "dev-list-sql",
+    "type": "sqlite",
+    "z": "tab-devices",
+    "mydb": "sqlite-db",
+    "sqlquery": "msg.topic",
+    "sql": "",
+    "name": "query",
+    "x": 510,
+    "y": 120,
+    "wires": [
+      [
+        "dev-list-out"
+      ]
+    ]
+  },
+  {
+    "id": "dev-list-out",
+    "type": "http response",
+    "z": "tab-devices",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 670,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "dev-class-in",
+    "type": "http in",
+    "z": "tab-devices",
+    "name": "/api/devices/:class",
+    "url": "/api/devices/:class",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 200,
+    "wires": [
+      [
+        "dev-class-fn"
+      ]
+    ]
+  },
+  {
+    "id": "dev-class-fn",
+    "type": "function",
+    "z": "tab-devices",
+    "name": "SELECT by class",
+    "func": "const cls = msg.req.params.class;\nmsg.topic = `SELECT * FROM device WHERE dhc_class = '${cls}' ORDER BY name`;\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 370,
+    "y": 200,
+    "wires": [
+      [
+        "dev-class-sql"
+      ]
+    ]
+  },
+  {
+    "id": "dev-class-sql",
+    "type": "sqlite",
+    "z": "tab-devices",
+    "mydb": "sqlite-db",
+    "sqlquery": "msg.topic",
+    "sql": "",
+    "name": "query",
+    "x": 540,
+    "y": 200,
+    "wires": [
+      [
+        "dev-class-out"
+      ]
+    ]
+  },
+  {
+    "id": "dev-class-out",
+    "type": "http response",
+    "z": "tab-devices",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 700,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "sync-in",
+    "type": "http in",
+    "z": "tab-devices",
+    "name": "/api/devices/sync",
+    "url": "/api/devices/sync",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 320,
+    "wires": [
+      [
+        "sync-fan"
+      ]
+    ]
+  },
+  {
+    "id": "sync-fan",
+    "type": "function",
+    "z": "tab-devices",
+    "name": "Fan out",
+    "func": "// Read Hue API key from global context (set at startup from config cache)\nconst hueKey = global.get(\"hue_api_key\") || env.get(\"HUE_API_KEY\") || \"\";\nif (!hueKey) { node.warn(\"HUE_API_KEY not set \u2014 Hue sync will fail\"); }\nreturn [\n    {payload:'', topic:'ccu'},\n    {payload:'', topic:'hue', url:'http://hue-bridge/api/' + hueKey + '/lights'}\n];",
+    "outputs": 2,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 350,
+    "y": 320,
+    "wires": [
+      [
+        "sync-ccu-req"
+      ],
+      [
+        "sync-hue-req"
+      ]
+    ]
+  },
+  {
+    "id": "sync-ccu-req",
+    "type": "http request",
+    "z": "tab-devices",
+    "name": "CCU statelist",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "http://homematic-ccu/addons/xmlapi/statelist.cgi",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 560,
+    "y": 300,
+    "wires": [
+      [
+        "sync-ccu-parse"
+      ]
+    ]
+  },
+  {
+    "id": "sync-hue-req",
+    "type": "http request",
+    "z": "tab-devices",
+    "name": "Hue lights",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 560,
+    "y": 340,
+    "wires": [
+      [
+        "sync-hue-parse"
+      ]
+    ]
+  },
+  {
+    "id": "sync-ccu-parse",
+    "type": "function",
+    "z": "tab-devices",
+    "name": "Parse CCU \u2192 devices",
+    "func": "const xml = msg.payload;\nif (!xml || msg.statusCode !== 200) { msg.payload = []; msg.topic = 'ccu'; return msg; }\nconst devices = [];\nconst re = /<device\\s+name='([^']+)'\\s+ise_id='([^']+)'\\s+unreach='([^']*)'/g;\nlet m;\nconst map = {\n    'HM-CC-RT-DN':  {c:'Thermostat',v:'heating',  cap:'sensor,actor',t:'thermostat'},\n    'HmIP-STHD':    {c:'Thermostat',v:'heating',  cap:'sensor,actor',t:'thermostat'},\n    'HM-LC-Dim':    {c:'Light',     v:'electrical',cap:'actor',       t:'dimmer'},\n    'HM-LC-Sw':     {c:'Switch',    v:'electrical',cap:'actor',       t:'switch'},\n    'HmIP-BSM':     {c:'Switch',    v:'electrical',cap:'sensor,actor',t:'switch'},\n    'HmIP-FSM':     {c:'Switch',    v:'electrical',cap:'sensor,actor',t:'switch'},\n    'HM-LC-Bl':     {c:'Actor',     v:'network',   cap:'actor',       t:'shutter'},\n    'HM-PB-2':      {c:'Controller',v:'network',   cap:'controller',  t:'button'},\n    'HmIP-BRC2':    {c:'Controller',v:'network',   cap:'controller',  t:'button'},\n    'HMIP-WRC2':    {c:'Controller',v:'network',   cap:'controller',  t:'button'},\n    'HM-Sec-SC':    {c:'Sensor',    v:'network',   cap:'sensor',      t:'contact'},\n    'HM-Sen-MDIR':  {c:'Sensor',    v:'network',   cap:'sensor',      t:'motion'},\n    'HM-WDS100':    {c:'Sensor',    v:'network',   cap:'sensor',      t:'weather'},\n    'HmIP-SWSD':    {c:'Sensor',    v:'network',   cap:'sensor',      t:'smoke'},\n    'HmIP-ASIR':    {c:'Actor',     v:'network',   cap:'actor',       t:'siren'},\n    'HM-ES-PMSw':   {c:'Switch',    v:'electrical',cap:'sensor,actor',t:'meter'},\n    'HM-OU-CF':     {c:'Actor',     v:'network',   cap:'actor',       t:'chime'},\n    'HM-SCI-3':     {c:'Sensor',    v:'network',   cap:'sensor',      t:'contact'},\n};\nconst skip = ['VIR-','HM-RCV-50','HmIP-RCV-','HmIP-CCU3','Living'];\nwhile ((m = re.exec(xml)) !== null) {\n    const name = m[1], ise = m[2];\n    if (skip.some(p => name.startsWith(p))) continue;\n    const parts = name.split(' ');\n    const model = parts[0] || '', serial = parts[1] || '';\n    let mapped = null;\n    for (const pfx of Object.keys(map)) { if (model.startsWith(pfx)) { mapped = map[pfx]; break; } }\n    if (!mapped) continue;\n    devices.push({name,protocol:'homematic',address:serial,dhc_class:mapped.c,design_view:mapped.v,capability:mapped.cap,type:mapped.t,model,manufacturer:'eQ-3',ccu_ise_id:ise,hue_unique_id:null});\n}\nmsg.payload = devices; msg.topic = 'ccu'; return msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 790,
+    "y": 300,
+    "wires": [
+      [
+        "sync-merge"
+      ]
+    ]
+  },
+  {
+    "id": "sync-hue-parse",
+    "type": "function",
+    "z": "tab-devices",
+    "name": "Parse Hue \u2192 devices",
+    "func": "const lights = msg.payload;\nif (!lights || typeof lights !== 'object' || msg.statusCode !== 200) { msg.payload = []; msg.topic = 'hue'; return msg; }\nconst mfr = {'LTG002':'Philips','LWA011':'Philips','LWE002':'Philips','SP 240':'Innr','RS 241 T':'Innr'};\nconst tm = {'Dimmable light':{c:'Light',t:'light'},'Color temperature light':{c:'Light',t:'light'},'Extended color light':{c:'Light',t:'light'},'On/Off plug-in unit':{c:'Socket',t:'plug'}};\nconst devices = [];\nfor (const [id, l] of Object.entries(lights)) {\n    const mapped = tm[l.type] || {c:'Light',t:'light'};\n    devices.push({name:'hue-'+l.name.toLowerCase().replace(/[^a-z0-9]+/g,'-'),protocol:'hue',address:id,dhc_class:mapped.c,design_view:'electrical',capability:'actor',type:mapped.t,model:l.modelid||'',manufacturer:mfr[l.modelid]||'Unknown',ccu_ise_id:null,hue_unique_id:l.uniqueid||null});\n}\nmsg.payload = devices; msg.topic = 'hue'; return msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 790,
+    "y": 340,
+    "wires": [
+      [
+        "sync-merge"
+      ]
+    ]
+  },
+  {
+    "id": "sync-merge",
+    "type": "join",
+    "z": "tab-devices",
+    "name": "Merge",
+    "mode": "custom",
+    "build": "object",
+    "property": "payload",
+    "propertyType": "msg",
+    "key": "topic",
+    "joiner": "",
+    "joinerType": "str",
+    "accumulate": false,
+    "timeout": "10",
+    "count": "2",
+    "reduceRight": false,
+    "reduceExp": "",
+    "reduceInit": "",
+    "reduceInitType": "",
+    "reduceFixup": "",
+    "x": 970,
+    "y": 320,
+    "wires": [
+      [
+        "sync-upsert"
+      ]
+    ]
+  },
+  {
+    "id": "sync-upsert",
+    "type": "function",
+    "z": "tab-devices",
+    "name": "Build UPSERT",
+    "func": "const ccu = msg.payload.ccu || [];\nconst hue = msg.payload.hue || [];\nconst all = [...ccu, ...hue];\nconst esc = v => v ? v.replace(/'/g,\"''\") : '';\nconst stmts = all.map(d =>\n    `INSERT OR REPLACE INTO device (name,protocol,address,type,dhc_class,design_view,capability,model,manufacturer,ccu_ise_id,hue_unique_id,last_seen) VALUES ('${esc(d.name)}','${esc(d.protocol)}','${esc(d.address)}','${esc(d.type)}','${esc(d.dhc_class)}','${esc(d.design_view)}','${esc(d.capability)}','${esc(d.model)}','${esc(d.manufacturer)}',${d.ccu_ise_id?\"'\"+esc(d.ccu_ise_id)+\"'\":'NULL'},${d.hue_unique_id?\"'\"+esc(d.hue_unique_id)+\"'\":'NULL'},datetime('now'))`\n);\nmsg.topic = stmts.join(\";\\n\");\nmsg._counts = {ccu:ccu.length, hue:hue.length, total:all.length};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 970,
+    "y": 380,
+    "wires": [
+      [
+        "sync-sql"
+      ]
+    ]
+  },
+  {
+    "id": "sync-sql",
+    "type": "sqlite",
+    "z": "tab-devices",
+    "mydb": "sqlite-db",
+    "sqlquery": "batch",
+    "sql": "",
+    "name": "UPSERT",
+    "x": 970,
+    "y": 440,
+    "wires": [
+      [
+        "sync-resp"
+      ]
+    ]
+  },
+  {
+    "id": "sync-resp",
+    "type": "function",
+    "z": "tab-devices",
+    "name": "Response",
+    "func": "msg.payload = {status:'ok',synced:msg._counts||{ccu:0,hue:0,total:0}};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 970,
+    "y": 500,
+    "wires": [
+      [
+        "sync-out"
+      ]
+    ]
+  },
+  {
+    "id": "sync-out",
+    "type": "http response",
+    "z": "tab-devices",
+    "name": "200",
+    "statusCode": "200",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 1130,
+    "y": 500,
+    "wires": []
+  },
+  {
+    "id": "cfg-init-inject",
+    "type": "inject",
+    "z": "tab-dashboard",
+    "name": "Startup: load config",
+    "props": [],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "1",
+    "topic": "",
+    "x": 130,
+    "y": 520,
+    "wires": [
+      [
+        "cfg-init-fn"
+      ]
+    ]
+  },
+  {
+    "id": "cfg-init-fn",
+    "type": "function",
+    "z": "tab-dashboard",
+    "name": "Store config in global",
+    "func": "// Read digitalhome.edge.config.cache and store keys in global context\nconst fs = require('fs');\nconst cfgPath = '/home/dhc-svc/digitalhome-edge/digitalhome.edge.config.cache';\ntry {\n    const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));\n    const hueKey = (cfg.devices && cfg.devices['hue-bridge'] && cfg.devices['hue-bridge'].api_key) || '';\n    global.set('hue_api_key', hueKey);\n    global.set('edge_config', cfg);\n    node.log('Config loaded: hue_api_key=' + (hueKey ? 'set' : 'empty'));\n    return {payload: {status: 'config loaded', hue_key_set: !!hueKey}};\n} catch(e) {\n    node.error('Failed to load config: ' + e.message);\n    return {payload: {status: 'config load failed', error: e.message}};\n}",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 360,
+    "y": 520,
+    "wires": [
+      []
+    ]
+  }
 ]
