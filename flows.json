@@ -2654,7 +2654,7 @@
   {
     "id": "dev-dash-inject",
     "type": "inject",
-    "z": "tab-devices",
+    "z": "tab-dashboard",
     "name": "Load devices (60s)",
     "props": [],
     "repeat": "60",
@@ -2663,7 +2663,7 @@
     "onceDelay": "3",
     "topic": "",
     "x": 130,
-    "y": 460,
+    "y": 660,
     "wires": [
       [
         "dev-dash-query"
@@ -2673,13 +2673,13 @@
   {
     "id": "dev-dash-query",
     "type": "sqlite",
-    "z": "tab-devices",
+    "z": "tab-dashboard",
     "mydb": "sqlite-db",
     "sqlquery": "fixed",
     "sql": "SELECT * FROM device ORDER BY design_view, dhc_class, name",
     "name": "All devices",
     "x": 340,
-    "y": 460,
+    "y": 660,
     "wires": [
       [
         "dev-dash-format"
@@ -2689,7 +2689,7 @@
   {
     "id": "dev-dash-format",
     "type": "function",
-    "z": "tab-devices",
+    "z": "tab-dashboard",
     "name": "Format for dashboard",
     "func": "const devices = msg.payload || [];\nconst summary = {};\nconst byView = {};\ndevices.forEach(d => {\n    const cls = d.dhc_class || 'Unknown';\n    const view = d.design_view || 'other';\n    if (!summary[cls]) summary[cls] = {count:0, view};\n    summary[cls].count++;\n    if (!byView[view]) byView[view] = [];\n    byView[view].push(d);\n});\nmsg.payload = {\n    total: devices.length,\n    protocols: {\n        homematic: devices.filter(d => d.protocol === 'homematic').length,\n        hue: devices.filter(d => d.protocol === 'hue').length\n    },\n    summary,\n    byView,\n    devices\n};\nreturn msg;",
     "outputs": 1,
@@ -2699,7 +2699,7 @@
     "finalize": "",
     "libs": [],
     "x": 560,
-    "y": 460,
+    "y": 660,
     "wires": [
       [
         "dev-overview-widget",
@@ -2710,7 +2710,7 @@
   {
     "id": "dev-overview-widget",
     "type": "ui-template",
-    "z": "tab-devices",
+    "z": "tab-dashboard",
     "group": "ui-group-dev-overview",
     "name": "Inventory Overview",
     "order": 1,
@@ -2724,7 +2724,7 @@
     "templateScope": "local",
     "className": "",
     "x": 780,
-    "y": 440,
+    "y": 640,
     "wires": [
       []
     ]
@@ -2732,7 +2732,7 @@
   {
     "id": "dev-list-widget",
     "type": "ui-template",
-    "z": "tab-devices",
+    "z": "tab-dashboard",
     "group": "ui-group-dev-list",
     "name": "Device Inventory Table",
     "order": 1,
@@ -2746,7 +2746,7 @@
     "templateScope": "local",
     "className": "",
     "x": 780,
-    "y": 480,
+    "y": 680,
     "wires": [
       []
     ]
