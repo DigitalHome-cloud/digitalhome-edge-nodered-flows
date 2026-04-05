@@ -2617,5 +2617,147 @@
     "wires": [
       []
     ]
+  },
+  {
+    "id": "ui-page-devices",
+    "type": "ui-page",
+    "name": "Devices",
+    "ui": "dhc-ui-base",
+    "path": "/devices",
+    "icon": "devices",
+    "layout": "grid",
+    "theme": "ui-theme-dark",
+    "order": 6,
+    "className": ""
+  },
+  {
+    "id": "ui-group-dev-overview",
+    "type": "ui-group",
+    "name": "Inventory Overview",
+    "page": "ui-page-devices",
+    "width": "6",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": "",
+    "disabled": ""
+  },
+  {
+    "id": "ui-group-dev-list",
+    "type": "ui-group",
+    "name": "Device Inventory",
+    "page": "ui-page-devices",
+    "width": "12",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": "",
+    "visible": "",
+    "disabled": ""
+  },
+  {
+    "id": "dev-dash-inject",
+    "type": "inject",
+    "z": "tab-devices",
+    "name": "Load devices (60s)",
+    "props": [],
+    "repeat": "60",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "x": 130,
+    "y": 460,
+    "wires": [
+      [
+        "dev-dash-query"
+      ]
+    ]
+  },
+  {
+    "id": "dev-dash-query",
+    "type": "sqlite",
+    "z": "tab-devices",
+    "mydb": "sqlite-db",
+    "sqlquery": "fixed",
+    "sql": "SELECT * FROM device ORDER BY design_view, dhc_class, name",
+    "name": "All devices",
+    "x": 340,
+    "y": 460,
+    "wires": [
+      [
+        "dev-dash-format"
+      ]
+    ]
+  },
+  {
+    "id": "dev-dash-format",
+    "type": "function",
+    "z": "tab-devices",
+    "name": "Format for dashboard",
+    "func": "const devices = msg.payload || [];\nconst summary = {};\nconst byView = {};\ndevices.forEach(d => {\n    const cls = d.dhc_class || 'Unknown';\n    const view = d.design_view || 'other';\n    if (!summary[cls]) summary[cls] = {count:0, view};\n    summary[cls].count++;\n    if (!byView[view]) byView[view] = [];\n    byView[view].push(d);\n});\nmsg.payload = {\n    total: devices.length,\n    protocols: {\n        homematic: devices.filter(d => d.protocol === 'homematic').length,\n        hue: devices.filter(d => d.protocol === 'hue').length\n    },\n    summary,\n    byView,\n    devices\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 560,
+    "y": 460,
+    "wires": [
+      [
+        "dev-overview-widget",
+        "dev-list-widget"
+      ]
+    ]
+  },
+  {
+    "id": "dev-overview-widget",
+    "type": "ui-template",
+    "z": "tab-devices",
+    "group": "ui-group-dev-overview",
+    "page": "",
+    "ui": "",
+    "name": "Inventory Overview",
+    "order": 1,
+    "width": "6",
+    "height": "4",
+    "head": "",
+    "format": "<template>\n  <div style=\"padding:8px 0;\">\n    <div style=\"display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;\">\n      <div style=\"background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3);\n                  border-radius:12px; padding:12px 20px; text-align:center; min-width:100px;\">\n        <div style=\"font-size:2rem; font-weight:700; color:#22c55e;\">{{ msg?.payload?.total || 0 }}</div>\n        <div style=\"font-size:0.7rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;\">Total Devices</div>\n      </div>\n      <div style=\"background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3);\n                  border-radius:12px; padding:12px 20px; text-align:center; min-width:100px;\">\n        <div style=\"font-size:2rem; font-weight:700; color:#3b82f6;\">{{ msg?.payload?.protocols?.homematic || 0 }}</div>\n        <div style=\"font-size:0.7rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;\">Homematic</div>\n      </div>\n      <div style=\"background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3);\n                  border-radius:12px; padding:12px 20px; text-align:center; min-width:100px;\">\n        <div style=\"font-size:2rem; font-weight:700; color:#f59e0b;\">{{ msg?.payload?.protocols?.hue || 0 }}</div>\n        <div style=\"font-size:0.7rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;\">Philips Hue</div>\n      </div>\n    </div>\n    <div style=\"display:flex; flex-wrap:wrap; gap:8px;\">\n      <div v-for=\"(info, cls) in msg?.payload?.summary\" :key=\"cls\"\n           style=\"display:flex; align-items:center; gap:8px; padding:8px 14px;\n                  background:rgba(30,41,59,0.8); border:1px solid rgba(148,163,184,0.15);\n                  border-radius:8px; min-width:120px;\">\n        <div :style=\"{\n          width:'8px', height:'8px', borderRadius:'50%',\n          background: info.view === 'electrical' ? '#f59e0b' : info.view === 'heating' ? '#ef4444' : '#3b82f6'\n        }\"></div>\n        <span style=\"color:#e5e7eb; font-size:0.85rem; font-weight:500;\">{{ cls }}</span>\n        <span style=\"color:#94a3b8; font-size:0.85rem; margin-left:auto;\">{{ info.count }}</span>\n      </div>\n    </div>\n  </div>\n</template>",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 780,
+    "y": 440,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "dev-list-widget",
+    "type": "ui-template",
+    "z": "tab-devices",
+    "group": "ui-group-dev-list",
+    "page": "",
+    "ui": "",
+    "name": "Device Inventory Table",
+    "order": 1,
+    "width": "12",
+    "height": "8",
+    "head": "",
+    "format": "<template>\n  <div style=\"padding:4px 0;\">\n    <div v-for=\"(viewDevices, view) in msg?.payload?.byView\" :key=\"view\"\n         style=\"margin-bottom:16px;\">\n      <div style=\"display:flex; align-items:center; gap:8px; margin-bottom:8px; padding-bottom:4px;\n                  border-bottom:2px solid;\"\n           :style=\"{borderColor: view === 'electrical' ? '#f59e0b' : view === 'heating' ? '#ef4444' : '#3b82f6'}\">\n        <div :style=\"{\n          width:'10px', height:'10px', borderRadius:'50%',\n          background: view === 'electrical' ? '#f59e0b' : view === 'heating' ? '#ef4444' : '#3b82f6'\n        }\"></div>\n        <span style=\"color:#e5e7eb; font-size:0.8rem; font-weight:600; text-transform:uppercase;\n                     letter-spacing:0.08em;\">{{ view }}</span>\n        <span style=\"color:#64748b; font-size:0.7rem;\">({{ viewDevices.length }})</span>\n      </div>\n      <table style=\"width:100%; border-collapse:collapse; font-size:0.75rem;\">\n        <thead>\n          <tr style=\"color:#94a3b8; text-align:left; border-bottom:1px solid rgba(148,163,184,0.2);\">\n            <th style=\"padding:4px 8px; font-weight:500;\">Name</th>\n            <th style=\"padding:4px 8px; font-weight:500;\">Class</th>\n            <th style=\"padding:4px 8px; font-weight:500;\">Type</th>\n            <th style=\"padding:4px 8px; font-weight:500;\">Protocol</th>\n            <th style=\"padding:4px 8px; font-weight:500;\">Model</th>\n            <th style=\"padding:4px 8px; font-weight:500;\">Capability</th>\n          </tr>\n        </thead>\n        <tbody>\n          <tr v-for=\"dev in viewDevices\" :key=\"dev.id\"\n              style=\"border-bottom:1px solid rgba(148,163,184,0.08);\">\n            <td style=\"padding:5px 8px; color:#e5e7eb; font-weight:500; max-width:200px;\n                       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;\">\n              {{ dev.name }}\n            </td>\n            <td style=\"padding:5px 8px;\">\n              <span :style=\"{\n                fontSize:'0.65rem', fontWeight:600, letterSpacing:'0.03em',\n                padding:'2px 8px', borderRadius:'999px',\n                background: dev.design_view === 'electrical' ? 'rgba(245,158,11,0.12)' :\n                           dev.design_view === 'heating' ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',\n                color: dev.design_view === 'electrical' ? '#fbbf24' :\n                       dev.design_view === 'heating' ? '#fca5a5' : '#93c5fd',\n                border: '1px solid ' + (dev.design_view === 'electrical' ? 'rgba(245,158,11,0.3)' :\n                        dev.design_view === 'heating' ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)')\n              }\">{{ dev.dhc_class }}</span>\n            </td>\n            <td style=\"padding:5px 8px; color:#94a3b8;\">{{ dev.type }}</td>\n            <td style=\"padding:5px 8px;\">\n              <span :style=\"{\n                color: dev.protocol === 'homematic' ? '#93c5fd' : '#fbbf24',\n                fontSize:'0.7rem'\n              }\">{{ dev.protocol }}</span>\n            </td>\n            <td style=\"padding:5px 8px; color:#64748b; font-size:0.7rem;\">{{ dev.model }}</td>\n            <td style=\"padding:5px 8px;\">\n              <span v-for=\"cap in (dev.capability || '').split(',')\" :key=\"cap\"\n                    style=\"display:inline-block; margin:1px 2px; padding:1px 6px;\n                           border-radius:4px; font-size:0.6rem; font-weight:500;\"\n                    :style=\"{\n                      background: cap.trim() === 'sensor' ? 'rgba(34,197,94,0.12)' :\n                                 cap.trim() === 'actor' ? 'rgba(168,85,247,0.12)' : 'rgba(59,130,246,0.12)',\n                      color: cap.trim() === 'sensor' ? '#4ade80' :\n                             cap.trim() === 'actor' ? '#c084fc' : '#93c5fd'\n                    }\">{{ cap.trim() }}</span>\n            </td>\n          </tr>\n        </tbody>\n      </table>\n    </div>\n  </div>\n</template>",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 780,
+    "y": 480,
+    "wires": [
+      []
+    ]
   }
 ]
