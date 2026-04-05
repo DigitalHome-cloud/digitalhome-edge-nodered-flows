@@ -2600,7 +2600,7 @@
     "type": "function",
     "z": "tab-dashboard",
     "name": "Store config in global",
-    "func": "// Read digitalhome.edge.config.cache and store keys in global context\nconst fs = require('fs');\nconst cfgPath = '/home/dhc-svc/digitalhome-edge/digitalhome.edge.config.cache';\ntry {\n    const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));\n    const hueKey = (cfg.devices && cfg.devices['hue-bridge'] && cfg.devices['hue-bridge'].api_key) || '';\n    global.set('hue_api_key', hueKey);\n    global.set('edge_config', cfg);\n    node.log('Config loaded: hue_api_key=' + (hueKey ? 'set' : 'empty'));\n    return {payload: {status: 'config loaded', hue_key_set: !!hueKey}};\n} catch(e) {\n    node.error('Failed to load config: ' + e.message);\n    return {payload: {status: 'config load failed', error: e.message}};\n}",
+    "func": "// Read digitalhome.edge.config.cache and store keys in global context\n// fs module is loaded via the node's \"libs\" config\nconst cfgPath = '/home/dhc-svc/digitalhome-edge/digitalhome.edge.config.cache';\ntry {\n    const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));\n    const hueKey = (cfg.devices && cfg.devices['hue-bridge'] && cfg.devices['hue-bridge'].api_key) || '';\n    global.set('hue_api_key', hueKey);\n    global.set('edge_config', cfg);\n    node.log('Config loaded: hue_api_key=' + (hueKey ? 'set' : 'empty'));\n    return {payload: {status: 'config loaded', hue_key_set: !!hueKey}};\n} catch(e) {\n    node.error('Failed to load config: ' + e.message);\n    return {payload: {status: 'config load failed', error: e.message}};\n}",
     "outputs": 1,
     "timeout": "",
     "noerr": 0,
