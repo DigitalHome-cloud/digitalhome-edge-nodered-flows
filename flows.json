@@ -2750,5 +2750,144 @@
     "wires": [
       []
     ]
+  },
+  {
+    "id": "dhe-sync-cfg",
+    "type": "dhc-sync-config",
+    "name": "cloud sync (stage)",
+    "cloudApiUrl": "https://stage-api.digitalhome.cloud/edge/v1",
+    "clientId": "digitalhome-edge",
+    "scope": "edge.link edge.telemetry edge.cbox edge.lake",
+    "secretsDir": "/secrets",
+    "configDir": "/config"
+  },
+  {
+    "id": "dhc-pair-flow",
+    "type": "tab",
+    "label": "dhc-sync pairing",
+    "disabled": false,
+    "info": "Ships with node-red-contrib-dhc-sync. Renders the pairing UI on the\nNode-RED Dashboard (@flowfuse/node-red-dashboard v2).\n\nOne dhc-sync-status node fans state transitions into two ui-template\nwidgets — one for the Setup card (visible while unlinked) and one for\nthe Status card (visible while linked). The Restart pairing button\nposts to /dhc-sync/command which the config node handles.\n\nBefore importing:\n- Ensure a dhc-sync-config node exists and referenced by the -status node.\n- Ensure @flowfuse/node-red-dashboard is installed."
+  },
+  {
+    "id": "dhc-ui-page-pairing",
+    "type": "ui-page",
+    "name": "Pairing",
+    "ui": "dhc-ui-base",
+    "path": "/pairing",
+    "icon": "link-variant",
+    "layout": "grid",
+    "theme": "",
+    "order": 7,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "dhc-ui-group-pairing",
+    "type": "ui-group",
+    "name": "Pairing",
+    "page": "dhc-ui-page-pairing",
+    "width": "12",
+    "height": "1",
+    "order": 1,
+    "showTitle": false,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "dhc-ui-group-linked",
+    "type": "ui-group",
+    "name": "Edge status",
+    "page": "dhc-ui-page-pairing",
+    "width": "12",
+    "height": "1",
+    "order": 2,
+    "showTitle": false,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "dhc-status-source",
+    "type": "dhc-sync-status",
+    "z": "dhc-pair-flow",
+    "name": "sync state",
+    "sync": "dhe-sync-cfg",
+    "x": 200,
+    "y": 100,
+    "wires": [
+      [
+        "dhc-fn-normalize"
+      ]
+    ]
+  },
+  {
+    "id": "dhc-fn-normalize",
+    "type": "function",
+    "z": "dhc-pair-flow",
+    "name": "normalize for UI",
+    "func": "const p = msg.payload || {};\nconst state = p.state || 'boot';\nlet statusText = ({\n    boot:              'Starting…',\n    unlinked:          'Reaching digitalhome.cloud…',\n    awaiting_approval: 'Waiting for your approval on your phone…',\n    linked:            'Linked ✓',\n    denied:            'Pairing denied. Tap Restart to try again.',\n    error:             p.error || 'Something went wrong. Tap Restart.'\n})[state] || state;\nif (state === 'linked') {\n    statusText = p.home_id\n        ? `Linked to ${p.home_id} ✓`\n        : 'Registered ✓ — waiting to be linked to a home in the Portal (My Edges).';\n}\nmsg.payload = { ...p, status_text: statusText };\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 100,
+    "wires": [
+      [
+        "dhc-tmpl-setup",
+        "dhc-tmpl-status"
+      ]
+    ]
+  },
+  {
+    "id": "dhc-tmpl-setup",
+    "type": "ui-template",
+    "z": "dhc-pair-flow",
+    "group": "dhc-ui-group-pairing",
+    "page": "",
+    "ui": "",
+    "name": "Setup card",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "format": "<template>\n    <v-card v-if=\"msg?.payload && msg.payload.state !== 'linked'\" flat>\n        <v-card-title>\n            <span v-if=\"msg.payload.state === 'awaiting_approval'\">Approve this edge</span>\n            <span v-else-if=\"msg.payload.state === 'denied'\">Pairing denied</span>\n            <span v-else>Preparing pairing…</span>\n        </v-card-title>\n\n        <v-card-text v-if=\"msg.payload.state === 'awaiting_approval'\">\n            <p>Scan on your phone, or open the URL in any browser:</p>\n            <div class=\"qr-wrap\" v-html=\"msg.payload.qr_svg\"></div>\n            <p style=\"word-break: break-all;\">\n                <a :href=\"msg.payload.verification_uri_complete\" target=\"_blank\">\n                    {{ msg.payload.verification_uri_complete }}\n                </a>\n            </p>\n            <p>Or enter this code manually:</p>\n            <h2 class=\"user-code\">{{ msg.payload.user_code }}</h2>\n            <p class=\"status-text\">{{ msg.payload.status_text }}</p>\n        </v-card-text>\n\n        <v-card-text v-else>\n            <p class=\"status-text\">{{ msg.payload.status_text }}</p>\n        </v-card-text>\n\n        <v-card-actions v-if=\"msg.payload.state === 'denied' || msg.payload.state === 'error'\">\n            <v-btn color=\"primary\" @click=\"restart\">Restart pairing</v-btn>\n        </v-card-actions>\n    </v-card>\n</template>\n\n<script>\nexport default {\n    methods: {\n        restart() {\n            fetch('/dhc-sync/command', {\n                method: 'POST',\n                headers: { 'Content-Type': 'application/json' },\n                body: JSON.stringify({ action: 'restart' })\n            }).catch((e) => console.warn('restart failed', e));\n        }\n    }\n};\n</script>\n\n<style scoped>\n.qr-wrap { max-width: 300px; margin: 1em 0; }\n.qr-wrap :deep(svg) { width: 100%; height: auto; }\n.user-code { font-family: monospace; letter-spacing: 0.2em; text-align: center; }\n.status-text { color: rgba(0,0,0,0.6); font-style: italic; }\n</style>",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 660,
+    "y": 60,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "dhc-tmpl-status",
+    "type": "ui-template",
+    "z": "dhc-pair-flow",
+    "group": "dhc-ui-group-linked",
+    "page": "",
+    "ui": "",
+    "name": "Linked status card",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "format": "<template>\n    <v-card v-if=\"msg?.payload && msg.payload.state === 'linked'\" flat>\n        <v-card-title v-if=\"msg.payload.home_id\">Linked ✓</v-card-title>\n        <v-card-title v-else>Registered — awaiting home assignment</v-card-title>\n        <v-card-text v-if=\"!msg.payload.home_id\">\n            <p>This box is registered to your account but not yet linked to a home. Open the Portal → <strong>My Edges</strong> to assign it.</p>\n        </v-card-text>\n        <v-card-text>\n            <v-list density=\"compact\">\n                <v-list-item>\n                    <v-list-item-title>Home</v-list-item-title>\n                    <v-list-item-subtitle v-if=\"msg.payload.home_id\">{{ msg.payload.home_id }}</v-list-item-subtitle>\n                    <v-list-item-subtitle v-else><em>not yet linked</em></v-list-item-subtitle>\n                </v-list-item>\n                <v-list-item>\n                    <v-list-item-title>Edge ID</v-list-item-title>\n                    <v-list-item-subtitle>{{ msg.payload.edge_id }}</v-list-item-subtitle>\n                </v-list-item>\n                <v-list-item v-if=\"msg.payload.last_telemetry_at\">\n                    <v-list-item-title>Last telemetry</v-list-item-title>\n                    <v-list-item-subtitle>{{ msg.payload.last_telemetry_at }}</v-list-item-subtitle>\n                </v-list-item>\n            </v-list>\n        </v-card-text>\n    </v-card>\n</template>",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 670,
+    "y": 140,
+    "wires": [
+      []
+    ]
   }
 ]
