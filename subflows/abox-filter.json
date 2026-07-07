@@ -1,0 +1,55 @@
+[
+    {
+        "id": "sf-abox-filter",
+        "type": "subflow",
+        "name": "A-Box filter",
+        "info": "Maps a normalized device observation against the A-Box vocabulary\nloaded into `global.aboxIndex` by the A-Box loader flow.\n\n**Input** — `msg.payload`:\n\n```\n{\n  source:      'hue' | 'ccu' | 'matter' | 'solarman' | 'smartthings',\n  device_id:   string,\n  ts?:         number | string (ISO8601),\n  observations: [{ field: string, value: any }, ...]\n}\n```\n\n**Output 0 (mapped)** — one JSON-LD C-Box fragment per observation that\nmatched a `dhc:sourceMap/<source>/<field>` entry in the A-Box.\n\n**Output 1 (unmapped)** — one row per observation that could not be\nmapped, with a `reason` field:\n  - `unknown_source_field` — no sourceMap entry\n  - `missing_capability` — sourceMap references an undefined capability\n  - `malformed_observation` — missing `field`\n  - `abox_not_loaded` — global.aboxIndex not yet populated\n\nAdd source-map entries to `/opt/dhe/cbox/abox.jsonld` to lift observations\nout of the unmapped stream — no code deploy required.",
+        "category": "dhc",
+        "in": [
+            {
+                "x": 40,
+                "y": 80,
+                "wires": [
+                    { "id": "sf-abox-filter-fn" }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 480,
+                "y": 60,
+                "wires": [
+                    { "id": "sf-abox-filter-fn", "port": 0 }
+                ]
+            },
+            {
+                "x": 480,
+                "y": 120,
+                "wires": [
+                    { "id": "sf-abox-filter-fn", "port": 1 }
+                ]
+            }
+        ],
+        "env": [],
+        "meta": {},
+        "color": "#87A980",
+        "outputLabels": ["mapped (C-Box)", "unmapped"],
+        "inputLabels": ["observation"],
+        "icon": "font-awesome/fa-filter"
+    },
+    {
+        "id": "sf-abox-filter-fn",
+        "type": "function",
+        "z": "sf-abox-filter",
+        "name": "map observations",
+        "func": "const index = global.get('aboxIndex') || null;\nif (!index) {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'aboxIndex missing' });\n    const obs = (msg.payload && msg.payload.observations) || [];\n    const unmapped = obs.map((o) => ({\n        source: msg.payload && msg.payload.source,\n        device_id: msg.payload && msg.payload.device_id,\n        field: o && o.field,\n        value: o && o.value,\n        reason: 'abox_not_loaded'\n    }));\n    return [null, unmapped.map((u) => ({ payload: u, topic: 'unmapped' }))];\n}\n\nconst p = msg.payload || {};\nconst src = p.source;\nconst devId = p.device_id;\nconst ts = p.ts ? new Date(p.ts).toISOString() : new Date().toISOString();\nconst observations = Array.isArray(p.observations) ? p.observations : [];\nconst homeId = p.home_id || global.get('homeId') || 'unknown';\n\nconst CONTEXT = 'https://schema.digitalhome.cloud/cbox/v0/context.jsonld';\n\nconst coerce = (raw, kind) => {\n    switch (kind) {\n        case 'byte-to-percent':\n            return typeof raw === 'number' ? Math.round(raw * 10000 / 254) / 100 : raw;\n        case 'unit-to-percent':\n            return typeof raw === 'number' ? Math.round(raw * 10000) / 100 : raw;\n        case 'mired-to-kelvin':\n            return typeof raw === 'number' && raw > 0 ? Math.round(1000000 / raw) : raw;\n        case 'centi-to-unit':\n            return typeof raw === 'number' ? raw / 100 : raw;\n        case 'hue-lightlevel-to-lux':\n            return typeof raw === 'number' ? Math.round(Math.pow(10, (raw - 1) / 10000) * 100) / 100 : raw;\n        case 'wh-to-kwh':\n            return typeof raw === 'number' ? raw / 1000 : raw;\n        case 'invert-boolean':\n            return typeof raw === 'boolean' ? !raw : (raw ? false : true);\n        default:\n            return raw;\n    }\n};\n\nconst uuidV4 = () => {\n    const b = new Uint8Array(16);\n    for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);\n    b[6] = (b[6] & 0x0f) | 0x40;\n    b[8] = (b[8] & 0x3f) | 0x80;\n    const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');\n    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);\n};\n\nconst mapped = [];\nconst unmapped = [];\n\nfor (const obs of observations) {\n    if (!obs || obs.field == null) {\n        unmapped.push({ source: src, device_id: devId, ts, field: obs && obs.field, value: obs && obs.value, reason: 'malformed_observation' });\n        continue;\n    }\n    const key = src + '/' + obs.field;\n    const entry = index.sourceMap[key];\n    if (!entry) {\n        unmapped.push({ source: src, device_id: devId, ts, field: obs.field, value: obs.value, reason: 'unknown_source_field' });\n        continue;\n    }\n    const capMeta = index.capability[entry.capability];\n    if (!capMeta) {\n        unmapped.push({ source: src, device_id: devId, ts, field: obs.field, value: obs.value, reason: 'missing_capability', capability: entry.capability });\n        continue;\n    }\n    const value = entry.coerce ? coerce(obs.value, entry.coerce) : obs.value;\n    const fragment = {\n        '@context': CONTEXT,\n        '@id': 'urn:dhe:point:' + uuidV4(),\n        '@type': capMeta.brickClass,\n        'dhc:capability': entry.capability,\n        'dhc:value': value,\n        'dhc:observedAt': ts,\n        'dhc:source': 'urn:dhe:' + src,\n        'dhc:pointOf': 'urn:dhe:device:' + src + ':' + devId,\n        'dhc:homeId': homeId\n    };\n    if (capMeta.unit)      fragment['dhc:unit']      = capMeta.unit;\n    if (capMeta.valueType) fragment['dhc:valueType'] = capMeta.valueType;\n    mapped.push(fragment);\n}\n\nconst counts = flow.get('aboxFilterCounts') || { mapped: 0, unmapped: 0 };\ncounts.mapped   += mapped.length;\ncounts.unmapped += unmapped.length;\nflow.set('aboxFilterCounts', counts);\nnode.status({ fill: 'green', shape: 'dot', text: 'mapped ' + counts.mapped + ' / unmapped ' + counts.unmapped });\n\nconst outMapped = mapped.map((f) => ({ payload: f, topic: 'cbox' }));\nconst outUnmapped = unmapped.map((u) => ({ payload: u, topic: 'unmapped' }));\n\nreturn [\n    outMapped.length ? outMapped : null,\n    outUnmapped.length ? outUnmapped : null\n];\n",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 260,
+        "y": 80,
+        "wires": [[], []]
+    }
+]

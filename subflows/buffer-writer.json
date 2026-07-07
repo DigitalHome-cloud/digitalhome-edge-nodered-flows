@@ -1,0 +1,54 @@
+[
+    {
+        "id": "sf-buffer-writer",
+        "type": "subflow",
+        "name": "Buffer writer",
+        "info": "Appends `msg.payload` (any JSON) as one JSONL line to a daily rotating file\nunder `/timeseries/{topic}/YYYY-MM-DD.jsonl`.\n\n**Input** — set `msg.topic` to the buffer channel:\n  - `cbox`     → `/timeseries/cbox/YYYY-MM-DD.jsonl` (mapped observations)\n  - `unmapped` → `/timeseries/unmapped/YYYY-MM-DD.jsonl` (review queue)\n  - any other value → falls back to `/timeseries/misc/YYYY-MM-DD.jsonl`\n\nDate is UTC (so files roll over at 00:00 UTC, matching cloud shipment windows).\nUses `file out` in append mode; each message = one line.",
+        "category": "dhc",
+        "in": [
+            {
+                "x": 40,
+                "y": 80,
+                "wires": [
+                    { "id": "sf-buffer-writer-fmt" }
+                ]
+            }
+        ],
+        "out": [],
+        "env": [],
+        "meta": {},
+        "color": "#DEB887",
+        "inputLabels": ["record"],
+        "icon": "font-awesome/fa-database"
+    },
+    {
+        "id": "sf-buffer-writer-fmt",
+        "type": "function",
+        "z": "sf-buffer-writer",
+        "name": "format + route",
+        "func": "const allowed = new Set(['cbox', 'unmapped']);\nconst channel = allowed.has(msg.topic) ? msg.topic : 'misc';\nconst d = new Date();\nconst yyyy = d.getUTCFullYear();\nconst mm = String(d.getUTCMonth() + 1).padStart(2, '0');\nconst dd = String(d.getUTCDate()).padStart(2, '0');\nmsg.filename = `/timeseries/${channel}/${yyyy}-${mm}-${dd}.jsonl`;\nmsg.payload = JSON.stringify(msg.payload);\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 220,
+        "y": 80,
+        "wires": [["sf-buffer-writer-file"]]
+    },
+    {
+        "id": "sf-buffer-writer-file",
+        "type": "file",
+        "z": "sf-buffer-writer",
+        "name": "append line",
+        "filename": "",
+        "filenameType": "msg",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 400,
+        "y": 80,
+        "wires": [[]]
+    }
+]

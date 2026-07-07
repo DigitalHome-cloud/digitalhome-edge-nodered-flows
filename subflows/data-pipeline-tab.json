@@ -1,0 +1,212 @@
+[
+    {
+        "id": "dp-tab",
+        "type": "tab",
+        "label": "Data pipeline",
+        "disabled": false,
+        "info": "# Data pipeline — device → A-Box filter → local buffer\n\nCaptures device observations from Hue + Homematic (phase 1; Matter / SolarMan\n/ SmartThings deferred), normalizes them against the A-Box vocabulary at\n`/cbox/abox.jsonld`, and writes JSON-LD C-Box fragments to a rotating local\nbuffer at `/timeseries/cbox/YYYY-MM-DD.jsonl`.\n\nUnmapped observations go to `/timeseries/unmapped/YYYY-MM-DD.jsonl` for\niterative vocabulary review — extend `abox.jsonld` and the filter hot-reloads\nwithout redeploy.\n\n## Requires\n\n- Subflow `sf-abox-filter` (import `subflows/abox-filter.json`).\n- Subflow `sf-buffer-writer` (import `subflows/buffer-writer.json`).\n- File `/cbox/abox.jsonld` seeded by `deploy/bootstrap.sh`.\n- Node-RED palettes: `node-red-contrib-ccu`, `node-red-contrib-huemagic`\n  (baked into the image). Config nodes for the CCU + Hue bridge are\n  created via the Node-RED UI on the box (not shipped in this tab —\n  each box has different bridge credentials).\n\n## Wiring after import\n\n1. Drop a `ccu-value` node with wildcard datapoint into the CCU column,\n   wire its output into `dp-fn-ccu-normalize`.\n2. Drop `hue-motion` / `hue-temperature` / `hue-brightness` / `hue-light`\n   nodes into the Hue column, wire their outputs into `dp-fn-hue-normalize`.\n3. Deploy. Watch `/timeseries/cbox/$(date -u +%F).jsonl` fill up.\n4. Watch `/timeseries/unmapped/$(date -u +%F).jsonl` — every recurring\n   `(source, field)` pair there is a missing entry in `abox.jsonld`."
+    },
+
+    {
+        "id": "dp-inject-boot",
+        "type": "inject",
+        "z": "dp-tab",
+        "name": "load at start",
+        "props": [{ "p": "payload" }],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 130,
+        "y": 80,
+        "wires": [["dp-file-abox"]]
+    },
+    {
+        "id": "dp-inject-reload",
+        "type": "inject",
+        "z": "dp-tab",
+        "name": "reload every 30s",
+        "props": [{ "p": "payload" }],
+        "repeat": "30",
+        "crontab": "",
+        "once": false,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 140,
+        "y": 120,
+        "wires": [["dp-file-abox"]]
+    },
+    {
+        "id": "dp-file-abox",
+        "type": "file in",
+        "z": "dp-tab",
+        "name": "read /cbox/abox.jsonld",
+        "filename": "/cbox/abox.jsonld",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": true,
+        "encoding": "utf8",
+        "allProps": false,
+        "x": 350,
+        "y": 100,
+        "wires": [["dp-json-abox"]]
+    },
+    {
+        "id": "dp-json-abox",
+        "type": "json",
+        "z": "dp-tab",
+        "name": "parse JSON-LD",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 550,
+        "y": 100,
+        "wires": [["dp-fn-abox-index"]]
+    },
+    {
+        "id": "dp-fn-abox-index",
+        "type": "function",
+        "z": "dp-tab",
+        "name": "build index → global.aboxIndex",
+        "func": "const doc = msg.payload;\nif (!doc || !Array.isArray(doc['@graph'])) {\n    node.error('abox.jsonld: missing @graph');\n    node.status({ fill: 'red', shape: 'ring', text: 'malformed' });\n    return null;\n}\n\nconst prev = global.get('aboxIndex');\nconst prevHash = prev && prev.hash;\nconst raw = JSON.stringify(doc);\nlet hash = 5381;\nfor (let i = 0; i < raw.length; i++) hash = ((hash * 33) ^ raw.charCodeAt(i)) >>> 0;\n\nif (prevHash === hash) {\n    node.status({ fill: 'blue', shape: 'dot', text: 'unchanged (' + prev.counts.capability + ' cap / ' + prev.counts.sourceMap + ' map)' });\n    return null;\n}\n\nconst capability = {};\nconst sourceMap = {};\nlet capCount = 0;\nlet mapCount = 0;\n\nfor (const entry of doc['@graph']) {\n    if (!entry || !entry['@id']) continue;\n    const id = entry['@id'];\n    if (id.startsWith('dhc:capability/')) {\n        capability[id] = {\n            brickClass: entry.brickClass || entry['dhc:brickClass'],\n            valueType:  entry.valueType  || entry['dhc:valueType'],\n            unit:       entry.unit       || entry['dhc:unit']\n        };\n        capCount++;\n    } else if (id.startsWith('dhc:sourceMap/')) {\n        const key = id.substring('dhc:sourceMap/'.length);\n        sourceMap[key] = {\n            capability: entry.capability || entry['dhc:capability'],\n            coerce:     entry.coerce     || entry['dhc:coerce']\n        };\n        mapCount++;\n    }\n}\n\nglobal.set('aboxIndex', {\n    capability,\n    sourceMap,\n    hash,\n    counts: { capability: capCount, sourceMap: mapCount },\n    loadedAt: new Date().toISOString(),\n    version: (doc['@graph'].find((e) => e && e['@id'] === 'dhc:v0') || {})['dhc:version'] || 'unknown'\n});\n\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded ' + capCount + ' cap / ' + mapCount + ' map' });\nnode.log('abox reloaded: ' + capCount + ' capabilities, ' + mapCount + ' source-maps');\nreturn null;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 800,
+        "y": 100,
+        "wires": [[]]
+    },
+
+    {
+        "id": "dp-comment-hue",
+        "type": "comment",
+        "z": "dp-tab",
+        "name": "Hue ingest — wire hue-motion / hue-temperature / hue-brightness / hue-light nodes into the normalizer →",
+        "info": "Drop palette nodes for the Hue sensors + lights you care about,\nfeed their outputs into `dp-fn-hue-normalize`.\n\nThe huemagic palette emits payloads like:\n  { state: { on: true, bri: 254, reachable: true }, ... }\nor for sensors:\n  { state: { presence: false, lastupdated: '...' }, ... }\n\nThe normalizer flattens `state` into observations = [{field, value}].",
+        "x": 350,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "dp-fn-hue-normalize",
+        "type": "function",
+        "z": "dp-tab",
+        "name": "Hue normalizer",
+        "func": "// Normalize a huemagic-emitted message to the shape the A-Box filter expects:\n//   { source: 'hue', device_id, ts, observations: [{ field, value }] }\n//\n// Huemagic gives us msg.info.id (light/sensor id) and msg.payload usually\n// contains state fields directly, or msg.state does. Different node types\n// vary — cover the common cases.\n\nconst id = (msg.info && (msg.info.uniqueId || msg.info.id)) || msg.uniqueId || 'unknown';\nconst state = msg.state || (msg.payload && typeof msg.payload === 'object' ? msg.payload : null);\nif (!state || typeof state !== 'object') {\n    node.warn('hue message without state: ' + JSON.stringify(msg.payload).slice(0, 120));\n    return null;\n}\n\nconst observations = Object.keys(state)\n    .filter((k) => !/^last(updated|announced)$/.test(k))\n    .filter((k) => state[k] !== null && state[k] !== undefined)\n    .map((field) => ({ field, value: state[field] }));\n\nif (!observations.length) return null;\n\nmsg.payload = {\n    source: 'hue',\n    device_id: String(id),\n    ts: Date.now(),\n    observations\n};\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 300,
+        "wires": [["dp-abox-filter"]]
+    },
+
+    {
+        "id": "dp-comment-ccu",
+        "type": "comment",
+        "z": "dp-tab",
+        "name": "CCU ingest — wire ccu-value node (channel=*, datapoint=*) into the normalizer →",
+        "info": "Drop one `ccu-value` node with channel/datapoint wildcards (`*`).\nWire its output into `dp-fn-ccu-normalize`.\n\nThe ccu palette emits per-value messages shaped like:\n  { payload: <value>, topic: '...', datapointName: 'TEMPERATURE',\n    device: '<hmip serial>', ise_id: 12345, ts: <ms> }",
+        "x": 350,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "dp-fn-ccu-normalize",
+        "type": "function",
+        "z": "dp-tab",
+        "name": "CCU normalizer",
+        "func": "// Normalize a ccu-value message to the shape the A-Box filter expects.\n// ccu-value emits one message per datapoint change:\n//   msg.payload = value, msg.datapointName = 'TEMPERATURE',\n//   msg.device = '<serial>', msg.channel = 1, msg.ts = <ms>\n\nconst field = msg.datapointName || msg.datapoint || (msg.topic && msg.topic.split('.').pop());\nconst devId = msg.device || msg.deviceName || msg.address || 'unknown';\nconst channel = msg.channel != null ? ':' + msg.channel : '';\nconst deviceId = devId + channel;\n\nif (field == null) {\n    node.warn('ccu message without datapoint field');\n    return null;\n}\n\nmsg.payload = {\n    source: 'ccu',\n    device_id: deviceId,\n    ts: msg.ts || Date.now(),\n    observations: [{ field, value: msg.payload }]\n};\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 440,
+        "wires": [["dp-abox-filter"]]
+    },
+
+    {
+        "id": "dp-comment-matter",
+        "type": "comment",
+        "z": "dp-tab",
+        "name": "Matter ingest — deferred (phase 2)",
+        "info": "Placeholder for Matter mDNS-based ingest (phase 2).\nSee edge-cloud-api.md §feature-flags: matter-mdns.",
+        "x": 350,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "dp-comment-solarman",
+        "type": "comment",
+        "z": "dp-tab",
+        "name": "SolarMan ingest — deferred (phase 2)",
+        "info": "Placeholder for home.solarmanpv.com cloud-API polling (phase 2).\nWill poll the SolarMan API on interval, emit normalized observations\ninto dp-abox-filter with source='solarman'.",
+        "x": 350,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "dp-comment-smartthings",
+        "type": "comment",
+        "z": "dp-tab",
+        "name": "SmartThings ingest — deferred (phase 2)",
+        "info": "Placeholder for SmartThings cloud-API OAuth-based ingest (phase 2).\nOAuth flow structurally similar to dhc-sync device flow.",
+        "x": 350,
+        "y": 600,
+        "wires": []
+    },
+
+    {
+        "id": "dp-abox-filter",
+        "type": "subflow:sf-abox-filter",
+        "z": "dp-tab",
+        "name": "A-Box filter",
+        "x": 700,
+        "y": 380,
+        "wires": [
+            ["dp-buffer-cbox"],
+            ["dp-buffer-unmapped"]
+        ]
+    },
+
+    {
+        "id": "dp-buffer-cbox",
+        "type": "subflow:sf-buffer-writer",
+        "z": "dp-tab",
+        "name": "→ /timeseries/cbox/",
+        "x": 940,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "dp-buffer-unmapped",
+        "type": "subflow:sf-buffer-writer",
+        "z": "dp-tab",
+        "name": "→ /timeseries/unmapped/",
+        "x": 950,
+        "y": 420,
+        "wires": []
+    },
+
+    {
+        "id": "dp-comment-counts",
+        "type": "comment",
+        "z": "dp-tab",
+        "name": "Ops: read counts with  msg.payload = flow.get('aboxFilterCounts', 'sf-abox-filter')  from a debug inject",
+        "info": "The A-Box filter tracks mapped/unmapped counts per flow instance in\nflow context. Use for dashboard widgets or health reports.",
+        "x": 700,
+        "y": 480,
+        "wires": []
+    }
+]
