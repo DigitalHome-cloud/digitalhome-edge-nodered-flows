@@ -2776,7 +2776,7 @@
     "path": "/pairing",
     "icon": "link-variant",
     "layout": "grid",
-    "theme": "",
+    "theme": "ui-theme-dark",
     "order": 7,
     "className": "",
     "visible": "true",
