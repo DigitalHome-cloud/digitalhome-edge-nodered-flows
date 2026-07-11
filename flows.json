@@ -3049,7 +3049,7 @@
     "y": 80,
     "wires": [
       [
-        "dp-file-abox"
+        "dp-fn-abox-index"
       ]
     ]
   },
@@ -3073,42 +3073,6 @@
     "y": 120,
     "wires": [
       [
-        "dp-file-abox"
-      ]
-    ]
-  },
-  {
-    "id": "dp-file-abox",
-    "type": "file in",
-    "z": "dp-tab",
-    "name": "read /cbox/abox.jsonld",
-    "filename": "/cbox/abox.jsonld",
-    "filenameType": "str",
-    "format": "utf8",
-    "chunk": false,
-    "sendError": true,
-    "encoding": "utf8",
-    "allProps": false,
-    "x": 350,
-    "y": 100,
-    "wires": [
-      [
-        "dp-json-abox"
-      ]
-    ]
-  },
-  {
-    "id": "dp-json-abox",
-    "type": "json",
-    "z": "dp-tab",
-    "name": "parse JSON-LD",
-    "property": "payload",
-    "action": "obj",
-    "pretty": false,
-    "x": 550,
-    "y": 100,
-    "wires": [
-      [
         "dp-fn-abox-index"
       ]
     ]
@@ -3117,13 +3081,18 @@
     "id": "dp-fn-abox-index",
     "type": "function",
     "z": "dp-tab",
-    "name": "build index → global.aboxIndex",
-    "func": "const doc = msg.payload;\nif (!doc || !Array.isArray(doc['@graph'])) {\n    node.error('abox.jsonld: missing @graph');\n    node.status({ fill: 'red', shape: 'ring', text: 'malformed' });\n    return null;\n}\n\nconst prev = global.get('aboxIndex');\nconst prevHash = prev && prev.hash;\nconst raw = JSON.stringify(doc);\nlet hash = 5381;\nfor (let i = 0; i < raw.length; i++) hash = ((hash * 33) ^ raw.charCodeAt(i)) >>> 0;\n\nif (prevHash === hash) {\n    node.status({ fill: 'blue', shape: 'dot', text: 'unchanged (' + prev.counts.capability + ' cap / ' + prev.counts.sourceMap + ' map)' });\n    return null;\n}\n\nconst capability = {};\nconst sourceMap = {};\nlet capCount = 0;\nlet mapCount = 0;\n\nfor (const entry of doc['@graph']) {\n    if (!entry || !entry['@id']) continue;\n    const id = entry['@id'];\n    if (id.startsWith('dhc:capability/')) {\n        capability[id] = {\n            brickClass: entry.brickClass || entry['dhc:brickClass'],\n            valueType:  entry.valueType  || entry['dhc:valueType'],\n            unit:       entry.unit       || entry['dhc:unit']\n        };\n        capCount++;\n    } else if (id.startsWith('dhc:sourceMap/')) {\n        const key = id.substring('dhc:sourceMap/'.length);\n        sourceMap[key] = {\n            capability: entry.capability || entry['dhc:capability'],\n            coerce:     entry.coerce     || entry['dhc:coerce']\n        };\n        mapCount++;\n    }\n}\n\nglobal.set('aboxIndex', {\n    capability,\n    sourceMap,\n    hash,\n    counts: { capability: capCount, sourceMap: mapCount },\n    loadedAt: new Date().toISOString(),\n    version: (doc['@graph'].find((e) => e && e['@id'] === 'dhc:v0') || {})['dhc:version'] || 'unknown'\n});\n\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded ' + capCount + ' cap / ' + mapCount + ' map' });\nnode.log('abox reloaded: ' + capCount + ' capabilities, ' + mapCount + ' source-maps');\nreturn null;\n",
+    "name": "build index → global.aboxIndex (mappings/)",
+    "func": "// Build global.aboxIndex from /cbox/mappings/*.map.json (source -> T-BOX field maps).\n// fs is enabled via the node's libs config. Replaces the old inline dhc:sourceMap\n// scan of abox.jsonld: each integration now owns one self-contained mapping file.\nconst DIR = '/cbox/mappings';\nlet manifest;\ntry {\n    manifest = JSON.parse(fs.readFileSync(DIR + '/mappings-manifest.json', 'utf8'));\n} catch (e) {\n    node.error('mappings-manifest.json unreadable: ' + e.message);\n    node.status({ fill: 'red', shape: 'ring', text: 'no manifest' });\n    return null;\n}\n\nconst capability = {};\nconst sourceMap = {};\nlet capCount = 0, mapCount = 0;\nconst loaded = [];\n\nfor (const src of (manifest.sources || [])) {\n    let doc;\n    try {\n        doc = JSON.parse(fs.readFileSync(DIR + '/' + src.file, 'utf8'));\n    } catch (e) {\n        node.warn('mapping ' + src.file + ' skipped: ' + e.message);\n        continue;\n    }\n    const sourceKey = doc.source || src.source;\n    const caps = doc.capabilities || {};\n    for (const capName of Object.keys(caps)) {\n        capability['dhc:capability/' + capName] = {\n            brickClass: caps[capName].brickClass,\n            valueType:  caps[capName].valueType,\n            unit:       caps[capName].unit\n        };\n        capCount++;\n    }\n    const fields = doc.fields || {};\n    for (const field of Object.keys(fields)) {\n        const f = fields[field];\n        sourceMap[sourceKey + '/' + field] = {\n            capability: 'dhc:capability/' + f.capability,\n            coerce:     f.coerce\n        };\n        mapCount++;\n    }\n    loaded.push(sourceKey);\n}\n\nconst raw = JSON.stringify({ capability, sourceMap });\nlet hash = 5381;\nfor (let i = 0; i < raw.length; i++) hash = ((hash * 33) ^ raw.charCodeAt(i)) >>> 0;\nconst prev = global.get('aboxIndex');\nif (prev && prev.hash === hash) {\n    node.status({ fill: 'blue', shape: 'dot', text: 'unchanged (' + prev.counts.capability + ' cap / ' + prev.counts.sourceMap + ' map)' });\n    return null;\n}\n\nglobal.set('aboxIndex', {\n    capability, sourceMap, hash,\n    counts: { capability: capCount, sourceMap: mapCount },\n    sources: loaded,\n    loadedAt: new Date().toISOString(),\n    version: manifest.version || 'unknown'\n});\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded ' + capCount + ' cap / ' + mapCount + ' map [' + loaded.join(',') + ']' });\nnode.log('mappings reloaded: ' + capCount + ' capabilities, ' + mapCount + ' fields from ' + loaded.join(', '));\nreturn null;\n",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
-    "libs": [],
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
     "x": 800,
     "y": 100,
     "wires": [
@@ -3199,16 +3168,6 @@
     "wires": []
   },
   {
-    "id": "dp-comment-solarman",
-    "type": "comment",
-    "z": "dp-tab",
-    "name": "SolarMan ingest — deferred (phase 2)",
-    "info": "Placeholder for home.solarmanpv.com cloud-API polling (phase 2).\nWill poll the SolarMan API on interval, emit normalized observations\ninto dp-abox-filter with source='solarman'.",
-    "x": 350,
-    "y": 560,
-    "wires": []
-  },
-  {
     "id": "dp-comment-smartthings",
     "type": "comment",
     "z": "dp-tab",
@@ -3216,6 +3175,451 @@
     "info": "Placeholder for SmartThings cloud-API OAuth-based ingest (phase 2).\nOAuth flow structurally similar to dhc-sync device flow.",
     "x": 350,
     "y": 600,
+    "wires": []
+  },
+  {
+    "id": "sm-inject-token",
+    "type": "inject",
+    "z": "dp-tab",
+    "name": "token: boot + daily",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "86400",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 300,
+    "y": 660,
+    "wires": [
+      [
+        "sm-fn-token"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-token",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "build token request",
+    "func": "// Build the Solarman token request. Reads non-secret config from /config and the\n// two secrets from /secrets (never logged, never written to timeseries).\n// fs is injected via the node's libs config.\nfunction readf(p){ try { return fs.readFileSync(p,'utf8').trim(); } catch(e){ return ''; } }\nlet cfg = {};\ntry { cfg = (JSON.parse(fs.readFileSync('/config/dhe.config.cache','utf8')).solar) || {}; }\ncatch(e){ node.error('config cache unreadable: ' + e.message); node.status({fill:'red',shape:'ring',text:'no config'}); return null; }\nconst base = cfg.base_url || 'https://globalapi.solarmanpv.com';\nconst appId = cfg.app_id;\nconst email = cfg.email;\nconst appSecret = readf('/secrets/solarman-app-secret');\nconst passwordHash = readf('/secrets/solarman-password-hash');\nif (!appId || !email || !appSecret || !passwordHash) {\n    node.error('solar credentials incomplete (need app_id+email in config, app-secret+password-hash in secrets)');\n    node.status({fill:'red',shape:'ring',text:'creds missing'});\n    return null;\n}\nglobal.set('solar_cfg', { base_url: base, poll_interval_s: cfg.poll_interval_s || 300 });\nmsg.method = 'POST';\nmsg.url = base + '/account/v1.0/token?appId=' + encodeURIComponent(appId) + '&language=en';\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = { appSecret: appSecret, email: email, password: passwordHash };\nnode.status({fill:'blue',shape:'dot',text:'requesting token'});\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 540,
+    "y": 660,
+    "wires": [
+      [
+        "sm-http-token"
+      ]
+    ]
+  },
+  {
+    "id": "sm-http-token",
+    "type": "http request",
+    "z": "dp-tab",
+    "name": "POST /account/v1.0/token",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 780,
+    "y": 660,
+    "wires": [
+      [
+        "sm-fn-token-store"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-token-store",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "store token",
+    "func": "const r = msg.payload || {};\nif (!r.access_token) {\n    node.error('token request failed: ' + JSON.stringify(r).slice(0, 200));\n    node.status({fill:'red',shape:'ring',text:'token failed'});\n    return null;\n}\nconst ttl = (typeof r.expires_in === 'number' ? r.expires_in : 3600) * 1000;\nglobal.set('solarman_token', { bearer: r.access_token, exp: Date.now() + ttl - 60000 });\nnode.status({fill:'green',shape:'dot',text:'token ok'});\n// kick station discovery\nreturn { payload: {} };\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 980,
+    "y": 660,
+    "wires": [
+      [
+        "sm-fn-list-req"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-list-req",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "build station list request",
+    "func": "const t = global.get('solarman_token');\nconst cfg = global.get('solar_cfg') || {};\nif (!t || !t.bearer) { node.warn('station list: no token yet'); return null; }\nconst base = cfg.base_url || 'https://globalapi.solarmanpv.com';\nmsg.method = 'POST';\nmsg.url = base + '/station/v1.0/list';\nmsg.headers = { 'Content-Type': 'application/json', 'Authorization': 'bearer ' + t.bearer };\nmsg.payload = { page: 1, size: 100 };\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 540,
+    "y": 720,
+    "wires": [
+      [
+        "sm-http-list"
+      ]
+    ]
+  },
+  {
+    "id": "sm-http-list",
+    "type": "http request",
+    "z": "dp-tab",
+    "name": "POST /station/v1.0/list",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 780,
+    "y": 720,
+    "wires": [
+      [
+        "sm-fn-list-store"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-list-store",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "store station ids",
+    "func": "const r = msg.payload || {};\nconst list = r.stationList || r.data || r.stations || [];\nconst ids = list.map((s) => s.id != null ? s.id : s.stationId).filter((x) => x != null);\nglobal.set('solarman_stations', ids);\nnode.status({fill: ids.length ? 'green' : 'yellow', shape:'dot', text: ids.length + ' stations'});\nif (!ids.length) node.warn('station list empty: ' + JSON.stringify(r).slice(0,200));\nreturn null;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 980,
+    "y": 720,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sm-inject-poll",
+    "type": "inject",
+    "z": "dp-tab",
+    "name": "poll realTime (5 min)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "300",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "15",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 300,
+    "y": 800,
+    "wires": [
+      [
+        "sm-fn-poll-req"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-poll-req",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "build realTime requests",
+    "func": "const t = global.get('solarman_token');\nconst cfg = global.get('solar_cfg') || {};\nconst stations = global.get('solarman_stations') || [];\nif (!t || !t.bearer || Date.now() > t.exp) { node.warn('poll: token missing/expired'); node.status({fill:'yellow',shape:'ring',text:'token stale'}); return null; }\nif (!stations.length) { node.warn('poll: no stations'); return null; }\nconst base = cfg.base_url || 'https://globalapi.solarmanpv.com';\nconst msgs = stations.map((id) => ({\n    method: 'POST',\n    url: base + '/station/v1.0/realTime',\n    headers: { 'Content-Type': 'application/json', 'Authorization': 'bearer ' + t.bearer },\n    payload: { stationId: id },\n    station_id: id\n}));\nnode.status({fill:'blue',shape:'dot',text:'polling ' + msgs.length});\nreturn [msgs];\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 540,
+    "y": 800,
+    "wires": [
+      [
+        "sm-http-realtime"
+      ]
+    ]
+  },
+  {
+    "id": "sm-http-realtime",
+    "type": "http request",
+    "z": "dp-tab",
+    "name": "POST /station/v1.0/realTime",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 790,
+    "y": 800,
+    "wires": [
+      [
+        "sm-fn-ingest"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-ingest",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "ingest → raw + normalize",
+    "func": "// One realTime response -> (out1) raw bronze envelope, (out2) normalized silver record.\nconst r = msg.payload || {};\nconst stationId = msg.station_id;\nconst tsIso = new Date().toISOString();\nconst FIELDS = ['generationPower','usePower','gridPower','batteryPower','batterySoc','generationValue','generationTotal'];\nconst observations = FIELDS\n    .filter((f) => r[f] !== undefined && r[f] !== null)\n    .map((f) => ({ field: f, value: r[f] }));\n\nglobal.set('solar_latest', { station_id: stationId, ts: tsIso, data: r, observations });\n\nconst rawMsg = { payload: { ts: tsIso, source: 'solarman', endpoint: '/station/v1.0/realTime', station_id: stationId, http_status: msg.statusCode || 200, response: r }, topic: 'raw/solarman' };\nconst normMsg = { payload: { source: 'solarman', device_id: String(stationId), ts: Date.now(), observations } };\nnode.status({fill:'green',shape:'dot',text: observations.length + ' obs @ ' + stationId});\nreturn [rawMsg, normMsg];\n",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1010,
+    "y": 800,
+    "wires": [
+      [
+        "sm-buffer-raw"
+      ],
+      [
+        "dp-abox-filter"
+      ]
+    ]
+  },
+  {
+    "id": "sm-buffer-raw",
+    "type": "subflow:sf-buffer-writer",
+    "z": "dp-tab",
+    "name": "→ /timeseries/raw/solarman/",
+    "x": 1260,
+    "y": 780,
+    "wires": []
+  },
+  {
+    "id": "sm-inject-history",
+    "type": "inject",
+    "z": "dp-tab",
+    "name": "history backfill (manual)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": "0.1",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 300,
+    "y": 880,
+    "wires": [
+      [
+        "sm-fn-history-req"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-history-req",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "build history requests",
+    "func": "// Manual/nightly history backfill: daily totals for the last 30 days per station.\nconst t = global.get('solarman_token');\nconst cfg = global.get('solar_cfg') || {};\nconst stations = global.get('solarman_stations') || [];\nif (!t || !t.bearer) { node.warn('history: no token'); return null; }\nconst base = cfg.base_url || 'https://globalapi.solarmanpv.com';\nconst end = new Date();\nconst start = new Date(end.getTime() - 30 * 86400000);\nconst fmt = (d) => d.toISOString().slice(0, 10);\nconst msgs = stations.map((id) => ({\n    method: 'POST',\n    url: base + '/station/v1.0/history',\n    headers: { 'Content-Type': 'application/json', 'Authorization': 'bearer ' + t.bearer },\n    payload: { stationId: id, timeType: 2, startTime: fmt(start), endTime: fmt(end) },\n    station_id: id\n}));\nreturn [msgs];\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 540,
+    "y": 880,
+    "wires": [
+      [
+        "sm-http-history"
+      ]
+    ]
+  },
+  {
+    "id": "sm-http-history",
+    "type": "http request",
+    "z": "dp-tab",
+    "name": "POST /station/v1.0/history",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 790,
+    "y": 880,
+    "wires": [
+      [
+        "sm-fn-history-store"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-history-store",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "wrap history → raw",
+    "func": "const r = msg.payload || {};\nmsg.payload = { ts: new Date().toISOString(), source: 'solarman', endpoint: '/station/v1.0/history', station_id: msg.station_id, http_status: msg.statusCode || 200, response: r };\nmsg.topic = 'raw/solarman/history';\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1010,
+    "y": 880,
+    "wires": [
+      [
+        "sm-buffer-raw-hist"
+      ]
+    ]
+  },
+  {
+    "id": "sm-buffer-raw-hist",
+    "type": "subflow:sf-buffer-writer",
+    "z": "dp-tab",
+    "name": "→ /timeseries/raw/solarman/history/",
+    "x": 1270,
+    "y": 880,
+    "wires": []
+  },
+  {
+    "id": "sm-status-in",
+    "type": "http in",
+    "z": "dp-tab",
+    "name": "/api/solar/status",
+    "url": "/api/solar/status",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 320,
+    "y": 960,
+    "wires": [
+      [
+        "sm-fn-status"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-status",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "current solar state",
+    "func": "const s = global.get('solar_latest');\nif (!s) { msg.statusCode = 503; msg.payload = { error: 'no solar data yet' }; return msg; }\nmsg.statusCode = 200;\nmsg.payload = s;\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 560,
+    "y": 960,
+    "wires": [
+      [
+        "sm-status-out"
+      ]
+    ]
+  },
+  {
+    "id": "sm-status-out",
+    "type": "http response",
+    "z": "dp-tab",
+    "name": "",
+    "statusCode": "",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 780,
+    "y": 960,
+    "wires": []
+  },
+  {
+    "id": "sm-catch",
+    "type": "catch",
+    "z": "dp-tab",
+    "name": "solarman http errors",
+    "scope": [
+      "sm-http-token",
+      "sm-http-list",
+      "sm-http-realtime",
+      "sm-http-history"
+    ],
+    "uncaught": false,
+    "x": 320,
+    "y": 1030,
+    "wires": [
+      [
+        "sm-fn-catch"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-catch",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "on 401/403 → re-auth",
+    "func": "const code = msg.statusCode || (msg.error && msg.error.statusCode);\nnode.warn('solarman http error: ' + ((msg.error && msg.error.message) || code));\nif (code === 401 || code === 403) { global.set('solarman_token', null); return msg; }\nreturn null;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 560,
+    "y": 1030,
+    "wires": [
+      [
+        "sm-fn-token"
+      ]
+    ]
+  },
+  {
+    "id": "sm-comment",
+    "type": "comment",
+    "z": "dp-tab",
+    "name": "Solarman PV ingest — token → stations → poll → raw(bronze)+abox-filter(silver)+global.solar_latest(gold)",
+    "info": "See docs/specs/solarman-edge-pipeline.md.\nSecrets: /secrets/solarman-app-secret, /secrets/solarman-password-hash (sha256 hex of account password).\nConfig: solar.{app_id,email,base_url,poll_interval_s} in dhe.config.cache.",
+    "x": 300,
+    "y": 620,
     "wires": []
   },
   {
