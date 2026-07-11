@@ -4653,7 +4653,7 @@
     "type": "function",
     "z": "dp-tab",
     "name": "scan for CCU",
-    "func": "return (async()=>{\n  let base=flow.get('scan_subnet');\n  if(!base){ const ifs=os.networkInterfaces();\n    for(const nm of Object.keys(ifs)){ for(const a of ifs[nm]){\n      if(a.family==='IPv4' && !a.internal && /^(192\\.168|10\\.|172\\.(1[6-9]|2\\d|3[01]))\\./.test(a.address)){ base=a.address.split('.').slice(0,3).join('.'); break; } }\n      if(base) break; } }\n  if(!base){ node.status({fill:'red',shape:'ring',text:'no subnet'}); return [ {payload:'could not determine subnet'}, {payload:'⚠ Scan: subnet not found'} ]; }\n  node.status({fill:'blue',shape:'dot',text:'scanning '+base+'.0/24'});\n  const probe=async(ip)=>{const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),1200);\n      try{ const r=await fetch('http://'+ip+'/addons/xmlapi/version.cgi',{signal:ctrl.signal}); clearTimeout(t);\n        if(r.ok){ const x=await r.text(); return {ip, version:((x.match(/>([0-9.]+)</)||[])[1]||'?')}; } }catch(e){}\n      finally{ clearTimeout(t); } return null;};\n  const ips=[]; for(let i=1;i<=254;i++) ips.push(base+'.'+i);\n  const res=(await Promise.allSettled(ips.map(probe))).map(r=>r.value).filter(Boolean);\n  global.set('ccu_candidates',res);\n  if(res.length) flow.set('ccu_ip_pending', res[0].ip);\n  node.status({fill:res.length?'green':'yellow',shape:'dot',text:res.length+' CCU found'});\n  const line = res.length ? res.map(c=>c.ip).join(', ') : 'none found on '+base+'.0/24';\n  return [ {payload: 'Found: '+line}, {payload:'CCU scan: '+res.length+' found'} ];\n})();",
+    "func": "return (async()=>{\n  let base=flow.get('scan_subnet');\n  if(!base){ const ifs=os.networkInterfaces(); const cands=[];\n    for(const nm of Object.keys(ifs)){ if(/^(lo|docker|veth|br-|virbr|tun|tap)/i.test(nm)) continue;\n      for(const a of ifs[nm]){ if(a.family!=='IPv4'||a.internal) continue;\n        if(/^192\\.168\\./.test(a.address)) cands.unshift(a.address);\n        else if(/^10\\./.test(a.address)) cands.push(a.address);\n        else if(/^172\\.(1[6-9]|2\\d|3[01])\\./.test(a.address) && !/^172\\.(17|18)\\./.test(a.address)) cands.push(a.address);\n      } }\n    if(cands.length) base=cands[0].split('.').slice(0,3).join('.');\n  }\n  if(!base){ node.status({fill:'red',shape:'ring',text:'no subnet'}); return [ {payload:'could not determine subnet — set Subnet manually'}, {payload:'⚠ Scan: subnet not found'} ]; }\n  node.status({fill:'blue',shape:'dot',text:'scanning '+base+'.0/24'});\n  const probe=async(ip)=>{const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),1200);\n      try{ const r=await fetch('http://'+ip+'/addons/xmlapi/version.cgi',{signal:ctrl.signal}); clearTimeout(t);\n        if(r.ok){ const x=await r.text(); return {ip, version:((x.match(/>([0-9.]+)</)||[])[1]||'?')}; } }catch(e){}\n      finally{ clearTimeout(t); } return null;};\n  const ips=[]; for(let i=1;i<=254;i++) ips.push(base+'.'+i);\n  const res=(await Promise.allSettled(ips.map(probe))).map(r=>r.value).filter(Boolean);\n  global.set('ccu_candidates',res);\n  if(res.length) flow.set('ccu_ip_pending', res[0].ip);\n  node.status({fill:res.length?'green':'yellow',shape:'dot',text:res.length+' CCU found'});\n  const line = res.length ? res.map(c=>c.ip).join(', ') : 'none found on '+base+'.0/24';\n  return [ {payload: 'Found: '+line}, {payload:'CCU scan: '+res.length+' found'} ];\n})();",
     "outputs": 2,
     "noerr": 0,
     "initialize": "",
@@ -4680,7 +4680,7 @@
     "type": "function",
     "z": "dp-tab",
     "name": "collect ccu field",
-    "func": "if(msg.topic==='ip') flow.set('ccu_ip_pending', String(msg.payload||'').trim());\nelse if(msg.topic==='user') flow.set('ccu_user_pending', String(msg.payload||''));\nelse if(msg.topic==='pass') flow.set('ccu_pass_pending', String(msg.payload||''));\nreturn null;",
+    "func": "if(msg.topic==='subnet'){ flow.set('scan_subnet', String(msg.payload||'').trim().replace(/\\.$/,'')||null); return null; }\nif(msg.topic==='ip') flow.set('ccu_ip_pending', String(msg.payload||'').trim());\nelse if(msg.topic==='user') flow.set('ccu_user_pending', String(msg.payload||''));\nelse if(msg.topic==='pass') flow.set('ccu_pass_pending', String(msg.payload||''));\nreturn null;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
@@ -4872,7 +4872,7 @@
     "type": "function",
     "z": "dp-tab",
     "name": "scan for Hue",
-    "func": "return (async()=>{\n  let base=flow.get('scan_subnet');\n  if(!base){ const ifs=os.networkInterfaces();\n    for(const nm of Object.keys(ifs)){ for(const a of ifs[nm]){\n      if(a.family==='IPv4' && !a.internal && /^(192\\.168|10\\.|172\\.(1[6-9]|2\\d|3[01]))\\./.test(a.address)){ base=a.address.split('.').slice(0,3).join('.'); break; } }\n      if(base) break; } }\n  if(!base){ node.status({fill:'red',shape:'ring',text:'no subnet'}); return [ {payload:'could not determine subnet'}, {payload:'⚠ Scan: subnet not found'} ]; }\n  node.status({fill:'blue',shape:'dot',text:'scanning '+base+'.0/24'});\n  const probe=async(ip)=>{const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),1200);\n      try{ const r=await fetch('http://'+ip+'/api/config',{signal:ctrl.signal}); clearTimeout(t);\n        if(r.ok){ const j=await r.json(); if(j && j.bridgeid && /^BSB/i.test(j.modelid||'')) return {ip, bridgeid:j.bridgeid, name:j.name}; } }catch(e){}\n      finally{ clearTimeout(t); } return null;};\n  const ips=[]; for(let i=1;i<=254;i++) ips.push(base+'.'+i);\n  const res=(await Promise.allSettled(ips.map(probe))).map(r=>r.value).filter(Boolean);\n  global.set('hue_candidates',res);\n  if(res.length) flow.set('hue_ip_pending', res[0].ip);\n  node.status({fill:res.length?'green':'yellow',shape:'dot',text:res.length+' Hue found'});\n  const line = res.length ? res.map(c=>c.ip).join(', ') : 'none found on '+base+'.0/24';\n  return [ {payload: 'Found: '+line}, {payload:'Hue scan: '+res.length+' found'} ];\n})();",
+    "func": "return (async()=>{\n  let base=flow.get('scan_subnet');\n  if(!base){ const ifs=os.networkInterfaces(); const cands=[];\n    for(const nm of Object.keys(ifs)){ if(/^(lo|docker|veth|br-|virbr|tun|tap)/i.test(nm)) continue;\n      for(const a of ifs[nm]){ if(a.family!=='IPv4'||a.internal) continue;\n        if(/^192\\.168\\./.test(a.address)) cands.unshift(a.address);\n        else if(/^10\\./.test(a.address)) cands.push(a.address);\n        else if(/^172\\.(1[6-9]|2\\d|3[01])\\./.test(a.address) && !/^172\\.(17|18)\\./.test(a.address)) cands.push(a.address);\n      } }\n    if(cands.length) base=cands[0].split('.').slice(0,3).join('.');\n  }\n  if(!base){ node.status({fill:'red',shape:'ring',text:'no subnet'}); return [ {payload:'could not determine subnet — set Subnet manually'}, {payload:'⚠ Scan: subnet not found'} ]; }\n  node.status({fill:'blue',shape:'dot',text:'scanning '+base+'.0/24'});\n  const probe=async(ip)=>{const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),1200);\n      try{ const r=await fetch('http://'+ip+'/api/config',{signal:ctrl.signal}); clearTimeout(t);\n        if(r.ok){ const j=await r.json(); if(j && j.bridgeid && /^BSB/i.test(j.modelid||'')) return {ip, bridgeid:j.bridgeid, name:j.name}; } }catch(e){}\n      finally{ clearTimeout(t); } return null;};\n  const ips=[]; for(let i=1;i<=254;i++) ips.push(base+'.'+i);\n  const res=(await Promise.allSettled(ips.map(probe))).map(r=>r.value).filter(Boolean);\n  global.set('hue_candidates',res);\n  if(res.length) flow.set('hue_ip_pending', res[0].ip);\n  node.status({fill:res.length?'green':'yellow',shape:'dot',text:res.length+' Hue found'});\n  const line = res.length ? res.map(c=>c.ip).join(', ') : 'none found on '+base+'.0/24';\n  return [ {payload: 'Found: '+line}, {payload:'Hue scan: '+res.length+' found'} ];\n})();",
     "outputs": 2,
     "noerr": 0,
     "initialize": "",
@@ -4899,7 +4899,7 @@
     "type": "function",
     "z": "dp-tab",
     "name": "collect hue field",
-    "func": "if(msg.topic==='ip') flow.set('hue_ip_pending', String(msg.payload||'').trim());\nreturn null;",
+    "func": "if(msg.topic==='subnet'){ flow.set('scan_subnet', String(msg.payload||'').trim().replace(/\\.$/,'')||null); return null; }\nif(msg.topic==='ip') flow.set('hue_ip_pending', String(msg.payload||'').trim());\nreturn null;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
@@ -5151,5 +5151,63 @@
     "x": 0,
     "y": 0,
     "wires": []
+  },
+  {
+    "id": "ccu-in-subnet",
+    "type": "ui-text-input",
+    "z": "dp-tab",
+    "group": "ccu-grp",
+    "name": "Subnet (optional, e.g. 192.168.1)",
+    "label": "Subnet (optional, e.g. 192.168.1)",
+    "tooltip": "",
+    "order": 0,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "mode": "text",
+    "delay": "400",
+    "topic": "subnet",
+    "topicType": "str",
+    "sendOnBlur": true,
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "clearable": false,
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-fn-collect"
+      ]
+    ]
+  },
+  {
+    "id": "hue-in-subnet",
+    "type": "ui-text-input",
+    "z": "dp-tab",
+    "group": "hue-grp",
+    "name": "Subnet (optional, e.g. 192.168.1)",
+    "label": "Subnet (optional, e.g. 192.168.1)",
+    "tooltip": "",
+    "order": 0,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "mode": "text",
+    "delay": "400",
+    "topic": "subnet",
+    "topicType": "str",
+    "sendOnBlur": true,
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "clearable": false,
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "hue-fn-collect"
+      ]
+    ]
   }
 ]
