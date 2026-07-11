@@ -2219,138 +2219,6 @@
     "wires": []
   },
   {
-    "id": "dev-list-in",
-    "type": "http in",
-    "z": "tab-devices",
-    "name": "/api/devices",
-    "url": "/api/devices",
-    "method": "get",
-    "upload": false,
-    "swaggerDoc": "",
-    "x": 150,
-    "y": 120,
-    "wires": [
-      [
-        "dev-list-fn"
-      ]
-    ]
-  },
-  {
-    "id": "dev-list-fn",
-    "type": "function",
-    "z": "tab-devices",
-    "name": "SELECT all",
-    "func": "msg.topic = 'SELECT * FROM device ORDER BY design_view, dhc_class, name';\nreturn msg;",
-    "outputs": 1,
-    "timeout": "",
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 340,
-    "y": 120,
-    "wires": [
-      [
-        "dev-list-sql"
-      ]
-    ]
-  },
-  {
-    "id": "dev-list-sql",
-    "type": "sqlite",
-    "z": "tab-devices",
-    "mydb": "sqlite-db",
-    "sqlquery": "msg.topic",
-    "sql": "",
-    "name": "query",
-    "x": 510,
-    "y": 120,
-    "wires": [
-      [
-        "dev-list-out"
-      ]
-    ]
-  },
-  {
-    "id": "dev-list-out",
-    "type": "http response",
-    "z": "tab-devices",
-    "name": "200",
-    "statusCode": "200",
-    "headers": {
-      "content-type": "application/json"
-    },
-    "x": 670,
-    "y": 120,
-    "wires": []
-  },
-  {
-    "id": "dev-class-in",
-    "type": "http in",
-    "z": "tab-devices",
-    "name": "/api/devices/:class",
-    "url": "/api/devices/:class",
-    "method": "get",
-    "upload": false,
-    "swaggerDoc": "",
-    "x": 160,
-    "y": 200,
-    "wires": [
-      [
-        "dev-class-fn"
-      ]
-    ]
-  },
-  {
-    "id": "dev-class-fn",
-    "type": "function",
-    "z": "tab-devices",
-    "name": "SELECT by class",
-    "func": "const cls = msg.req.params.class;\nmsg.topic = `SELECT * FROM device WHERE dhc_class = '${cls}' ORDER BY name`;\nreturn msg;",
-    "outputs": 1,
-    "timeout": "",
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 370,
-    "y": 200,
-    "wires": [
-      [
-        "dev-class-sql"
-      ]
-    ]
-  },
-  {
-    "id": "dev-class-sql",
-    "type": "sqlite",
-    "z": "tab-devices",
-    "mydb": "sqlite-db",
-    "sqlquery": "msg.topic",
-    "sql": "",
-    "name": "query",
-    "x": 540,
-    "y": 200,
-    "wires": [
-      [
-        "dev-class-out"
-      ]
-    ]
-  },
-  {
-    "id": "dev-class-out",
-    "type": "http response",
-    "z": "tab-devices",
-    "name": "200",
-    "statusCode": "200",
-    "headers": {
-      "content-type": "application/json"
-    },
-    "x": 700,
-    "y": 200,
-    "wires": []
-  },
-  {
     "id": "sync-in",
     "type": "http in",
     "z": "tab-devices",
@@ -2599,7 +2467,7 @@
     "type": "function",
     "z": "tab-dashboard",
     "name": "Store config in global",
-    "func": "// Read digitalhome.edge.config.cache and store keys in global context\n// fs module is loaded via the node's \"libs\" config\nconst cfgPath = '/home/dhc-svc/digitalhome-edge/digitalhome.edge.config.cache';\ntry {\n    const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));\n    const hueKey = (cfg.devices && cfg.devices['hue-bridge'] && cfg.devices['hue-bridge'].api_key) || '';\n    global.set('hue_api_key', hueKey);\n    global.set('edge_config', cfg);\n    node.log('Config loaded: hue_api_key=' + (hueKey ? 'set' : 'empty'));\n    return {payload: {status: 'config loaded', hue_key_set: !!hueKey}};\n} catch(e) {\n    node.error('Failed to load config: ' + e.message);\n    return {payload: {status: 'config load failed', error: e.message}};\n}",
+    "func": "// Read digitalhome.edge.config.cache and store keys in global context\n// fs module is loaded via the node's \"libs\" config\nconst cfgPath = '/config/dhe.config.cache';\ntry {\n    const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));\n    const hueKey = (cfg.devices && cfg.devices['hue-bridge'] && cfg.devices['hue-bridge'].api_key) || '';\n    global.set('hue_api_key', hueKey);\n    global.set('edge_config', cfg);\n    node.log('Config loaded: hue_api_key=' + (hueKey ? 'set' : 'empty'));\n    return {payload: {status: 'config loaded', hue_key_set: !!hueKey}};\n} catch(e) {\n    node.error('Failed to load config: ' + e.message);\n    return {payload: {status: 'config load failed', error: e.message}};\n}",
     "outputs": 1,
     "timeout": "",
     "noerr": 0,
@@ -2650,106 +2518,6 @@
     "order": 2,
     "showTitle": true,
     "className": ""
-  },
-  {
-    "id": "dev-dash-inject",
-    "type": "inject",
-    "z": "tab-dashboard",
-    "name": "Load devices (60s)",
-    "props": [],
-    "repeat": "60",
-    "crontab": "",
-    "once": true,
-    "onceDelay": "3",
-    "topic": "",
-    "x": 130,
-    "y": 660,
-    "wires": [
-      [
-        "dev-dash-query"
-      ]
-    ]
-  },
-  {
-    "id": "dev-dash-query",
-    "type": "sqlite",
-    "z": "tab-dashboard",
-    "mydb": "sqlite-db",
-    "sqlquery": "fixed",
-    "sql": "SELECT * FROM device ORDER BY design_view, dhc_class, name",
-    "name": "All devices",
-    "x": 340,
-    "y": 660,
-    "wires": [
-      [
-        "dev-dash-format"
-      ]
-    ]
-  },
-  {
-    "id": "dev-dash-format",
-    "type": "function",
-    "z": "tab-dashboard",
-    "name": "Format for dashboard",
-    "func": "const devices = msg.payload || [];\nconst summary = {};\nconst byView = {};\ndevices.forEach(d => {\n    const cls = d.dhc_class || 'Unknown';\n    const view = d.design_view || 'other';\n    if (!summary[cls]) summary[cls] = {count:0, view};\n    summary[cls].count++;\n    if (!byView[view]) byView[view] = [];\n    byView[view].push(d);\n});\nmsg.payload = {\n    total: devices.length,\n    protocols: {\n        homematic: devices.filter(d => d.protocol === 'homematic').length,\n        hue: devices.filter(d => d.protocol === 'hue').length\n    },\n    summary,\n    byView,\n    devices\n};\nreturn msg;",
-    "outputs": 1,
-    "timeout": "",
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 560,
-    "y": 660,
-    "wires": [
-      [
-        "dev-overview-widget",
-        "dev-list-widget"
-      ]
-    ]
-  },
-  {
-    "id": "dev-overview-widget",
-    "type": "ui-template",
-    "z": "tab-dashboard",
-    "group": "ui-group-dev-overview",
-    "name": "Inventory Overview",
-    "order": 1,
-    "width": "6",
-    "height": "4",
-    "head": "",
-    "format": "<template>\n  <div style=\"padding:8px 0;\">\n    <div style=\"display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;\">\n      <div style=\"background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3);\n                  border-radius:12px; padding:12px 20px; text-align:center; min-width:100px;\">\n        <div style=\"font-size:2rem; font-weight:700; color:#22c55e;\">{{ msg?.payload?.total || 0 }}</div>\n        <div style=\"font-size:0.7rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;\">Total Devices</div>\n      </div>\n      <div style=\"background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3);\n                  border-radius:12px; padding:12px 20px; text-align:center; min-width:100px;\">\n        <div style=\"font-size:2rem; font-weight:700; color:#3b82f6;\">{{ msg?.payload?.protocols?.homematic || 0 }}</div>\n        <div style=\"font-size:0.7rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;\">Homematic</div>\n      </div>\n      <div style=\"background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3);\n                  border-radius:12px; padding:12px 20px; text-align:center; min-width:100px;\">\n        <div style=\"font-size:2rem; font-weight:700; color:#f59e0b;\">{{ msg?.payload?.protocols?.hue || 0 }}</div>\n        <div style=\"font-size:0.7rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;\">Philips Hue</div>\n      </div>\n    </div>\n    <div style=\"display:flex; flex-wrap:wrap; gap:8px;\">\n      <div v-for=\"(info, cls) in msg?.payload?.summary\" :key=\"cls\"\n           style=\"display:flex; align-items:center; gap:8px; padding:8px 14px;\n                  background:rgba(30,41,59,0.8); border:1px solid rgba(148,163,184,0.15);\n                  border-radius:8px; min-width:120px;\">\n        <div :style=\"{\n          width:'8px', height:'8px', borderRadius:'50%',\n          background: info.view === 'electrical' ? '#f59e0b' : info.view === 'heating' ? '#ef4444' : '#3b82f6'\n        }\"></div>\n        <span style=\"color:#e5e7eb; font-size:0.85rem; font-weight:500;\">{{ cls }}</span>\n        <span style=\"color:#94a3b8; font-size:0.85rem; margin-left:auto;\">{{ info.count }}</span>\n      </div>\n    </div>\n  </div>\n</template>",
-    "storeOutMessages": true,
-    "passthru": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "className": "",
-    "x": 780,
-    "y": 640,
-    "wires": [
-      []
-    ]
-  },
-  {
-    "id": "dev-list-widget",
-    "type": "ui-template",
-    "z": "tab-dashboard",
-    "group": "ui-group-dev-list",
-    "name": "Device Inventory Table",
-    "order": 1,
-    "width": "12",
-    "height": "8",
-    "head": "",
-    "format": "<template>\n  <div style=\"padding:4px 0;\">\n    <div v-for=\"(viewDevices, view) in msg?.payload?.byView\" :key=\"view\"\n         style=\"margin-bottom:16px;\">\n      <div style=\"display:flex; align-items:center; gap:8px; margin-bottom:8px; padding-bottom:4px;\n                  border-bottom:2px solid;\"\n           :style=\"{borderColor: view === 'electrical' ? '#f59e0b' : view === 'heating' ? '#ef4444' : '#3b82f6'}\">\n        <div :style=\"{\n          width:'10px', height:'10px', borderRadius:'50%',\n          background: view === 'electrical' ? '#f59e0b' : view === 'heating' ? '#ef4444' : '#3b82f6'\n        }\"></div>\n        <span style=\"color:#e5e7eb; font-size:0.8rem; font-weight:600; text-transform:uppercase;\n                     letter-spacing:0.08em;\">{{ view }}</span>\n        <span style=\"color:#64748b; font-size:0.7rem;\">({{ viewDevices.length }})</span>\n      </div>\n      <table style=\"width:100%; border-collapse:collapse; font-size:0.75rem;\">\n        <thead>\n          <tr style=\"color:#94a3b8; text-align:left; border-bottom:1px solid rgba(148,163,184,0.2);\">\n            <th style=\"padding:4px 8px; font-weight:500;\">Name</th>\n            <th style=\"padding:4px 8px; font-weight:500;\">Class</th>\n            <th style=\"padding:4px 8px; font-weight:500;\">Type</th>\n            <th style=\"padding:4px 8px; font-weight:500;\">Protocol</th>\n            <th style=\"padding:4px 8px; font-weight:500;\">Model</th>\n            <th style=\"padding:4px 8px; font-weight:500;\">Capability</th>\n          </tr>\n        </thead>\n        <tbody>\n          <tr v-for=\"dev in viewDevices\" :key=\"dev.id\"\n              style=\"border-bottom:1px solid rgba(148,163,184,0.08);\">\n            <td style=\"padding:5px 8px; color:#e5e7eb; font-weight:500; max-width:200px;\n                       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;\">\n              {{ dev.name }}\n            </td>\n            <td style=\"padding:5px 8px;\">\n              <span :style=\"{\n                fontSize:'0.65rem', fontWeight:600, letterSpacing:'0.03em',\n                padding:'2px 8px', borderRadius:'999px',\n                background: dev.design_view === 'electrical' ? 'rgba(245,158,11,0.12)' :\n                           dev.design_view === 'heating' ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',\n                color: dev.design_view === 'electrical' ? '#fbbf24' :\n                       dev.design_view === 'heating' ? '#fca5a5' : '#93c5fd',\n                border: '1px solid ' + (dev.design_view === 'electrical' ? 'rgba(245,158,11,0.3)' :\n                        dev.design_view === 'heating' ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)')\n              }\">{{ dev.dhc_class }}</span>\n            </td>\n            <td style=\"padding:5px 8px; color:#94a3b8;\">{{ dev.type }}</td>\n            <td style=\"padding:5px 8px;\">\n              <span :style=\"{\n                color: dev.protocol === 'homematic' ? '#93c5fd' : '#fbbf24',\n                fontSize:'0.7rem'\n              }\">{{ dev.protocol }}</span>\n            </td>\n            <td style=\"padding:5px 8px; color:#64748b; font-size:0.7rem;\">{{ dev.model }}</td>\n            <td style=\"padding:5px 8px;\">\n              <span v-for=\"cap in (dev.capability || '').split(',')\" :key=\"cap\"\n                    style=\"display:inline-block; margin:1px 2px; padding:1px 6px;\n                           border-radius:4px; font-size:0.6rem; font-weight:500;\"\n                    :style=\"{\n                      background: cap.trim() === 'sensor' ? 'rgba(34,197,94,0.12)' :\n                                 cap.trim() === 'actor' ? 'rgba(168,85,247,0.12)' : 'rgba(59,130,246,0.12)',\n                      color: cap.trim() === 'sensor' ? '#4ade80' :\n                             cap.trim() === 'actor' ? '#c084fc' : '#93c5fd'\n                    }\">{{ cap.trim() }}</span>\n            </td>\n          </tr>\n        </tbody>\n      </table>\n    </div>\n  </div>\n</template>",
-    "storeOutMessages": true,
-    "passthru": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "className": "",
-    "x": 780,
-    "y": 680,
-    "wires": [
-      []
-    ]
   },
   {
     "id": "dhe-sync-cfg",
@@ -4577,6 +4345,811 @@
     "info": "The A-Box filter tracks mapped/unmapped counts per flow instance in\nflow context. Use for dashboard widgets or health reports.",
     "x": 700,
     "y": 480,
+    "wires": []
+  },
+  {
+    "id": "ccu-grp",
+    "type": "ui-group",
+    "name": "Homematic CCU",
+    "page": "dhc-ui-page-pairing",
+    "width": "6",
+    "height": "1",
+    "order": 5,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "hue-grp",
+    "type": "ui-group",
+    "name": "Philips Hue",
+    "page": "dhc-ui-page-pairing",
+    "width": "6",
+    "height": "1",
+    "order": 6,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "dev-inject-load",
+    "type": "inject",
+    "z": "dp-tab",
+    "name": "load device secrets",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "4",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "dev-fn-load"
+      ]
+    ]
+  },
+  {
+    "id": "dev-fn-load",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "load /secrets device cfg",
+    "func": "// boot: load device config from writable /secrets, populate global + link state\nfunction rd(p){ try { return JSON.parse(fs.readFileSync(p,'utf8')); } catch(e){ return null; } }\nconst hue=rd('/secrets/hue.json'); const ccu=rd('/secrets/ccu.json');\nif(hue && hue.ip){ global.set('hue_ip',hue.ip); if(hue.api_key) global.set('hue_api_key',hue.api_key);\n    global.set('hue_link',{state:'linked',ip:hue.ip,bridgeid:hue.bridgeid}); }\nelse global.set('hue_link',{state:'unlinked'});\nif(ccu && ccu.ip){ global.set('ccu_ip',ccu.ip); if(ccu.user) global.set('ccu_user',ccu.user); if(ccu.pass) global.set('ccu_pass',ccu.pass);\n    global.set('ccu_link',{state:'linked',ip:ccu.ip,version:ccu.version}); }\nelse global.set('ccu_link',{state:'unlinked'});\nnode.status({fill:'blue',shape:'dot',text:'hue '+(hue?'✓':'–')+' / ccu '+(ccu?'✓':'–')});\nreturn null;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "dev-inject-state",
+    "type": "inject",
+    "z": "dp-tab",
+    "name": "device status (3s)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "5",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "dev-fn-state"
+      ]
+    ]
+  },
+  {
+    "id": "dev-fn-state",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "device status lines",
+    "func": "function line(link,latest){ const s=link&&link.state||'unlinked';\n  const badge={unlinked:'Not connected',linked:'Connected ✓'}[s]||s;\n  if(s==='linked'){ const t=(latest&&latest.ts)?(' · last '+latest.ts.slice(11,19)+'Z'):' · waiting for poll…';\n    return badge+' @ '+(link.ip||'?')+t; }\n  return badge+' — Scan, confirm IP, then Connect'; }\nconst ccu=line(global.get('ccu_link'), global.get('ccu_latest'));\nconst hue=line(global.get('hue_link'), global.get('hue_latest'));\nreturn [ {payload:ccu}, {payload:hue} ];",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-txt-status"
+      ],
+      [
+        "hue-txt-status"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-btn-scan",
+    "type": "ui-button",
+    "z": "dp-tab",
+    "group": "ccu-grp",
+    "name": "Scan network",
+    "label": "Scan network",
+    "order": 1,
+    "width": "6",
+    "height": "1",
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#334155",
+    "className": "",
+    "icon": "",
+    "payload": "scan",
+    "payloadType": "str",
+    "topic": "scan",
+    "topicType": "str",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-fn-scan"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-txt-cand",
+    "type": "ui-text",
+    "z": "dp-tab",
+    "group": "ccu-grp",
+    "name": "Found",
+    "label": "Found",
+    "order": 2,
+    "width": "6",
+    "height": "1",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": false,
+    "font": "",
+    "fontSize": 14,
+    "color": "",
+    "className": "",
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "ccu-in-ip",
+    "type": "ui-text-input",
+    "z": "dp-tab",
+    "group": "ccu-grp",
+    "name": "CCU IP",
+    "label": "CCU IP",
+    "tooltip": "",
+    "order": 3,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "mode": "text",
+    "delay": "400",
+    "topic": "ip",
+    "topicType": "str",
+    "sendOnBlur": true,
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "clearable": false,
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-fn-collect"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-in-user",
+    "type": "ui-text-input",
+    "z": "dp-tab",
+    "group": "ccu-grp",
+    "name": "User (optional)",
+    "label": "User (optional)",
+    "tooltip": "",
+    "order": 4,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "mode": "text",
+    "delay": "400",
+    "topic": "user",
+    "topicType": "str",
+    "sendOnBlur": true,
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "clearable": false,
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-fn-collect"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-in-pass",
+    "type": "ui-text-input",
+    "z": "dp-tab",
+    "group": "ccu-grp",
+    "name": "Password (optional)",
+    "label": "Password (optional)",
+    "tooltip": "",
+    "order": 5,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "mode": "password",
+    "delay": "400",
+    "topic": "pass",
+    "topicType": "str",
+    "sendOnBlur": true,
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "clearable": false,
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-fn-collect"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-btn-connect",
+    "type": "ui-button",
+    "z": "dp-tab",
+    "group": "ccu-grp",
+    "name": "Connect CCU",
+    "label": "Connect CCU",
+    "order": 6,
+    "width": "6",
+    "height": "1",
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#2563eb",
+    "className": "",
+    "icon": "",
+    "payload": "connect",
+    "payloadType": "str",
+    "topic": "connect",
+    "topicType": "str",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-fn-connect"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-txt-status",
+    "type": "ui-text",
+    "z": "dp-tab",
+    "group": "ccu-grp",
+    "name": "Status",
+    "label": "Status",
+    "order": 7,
+    "width": "6",
+    "height": "1",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": false,
+    "font": "",
+    "fontSize": 14,
+    "color": "",
+    "className": "",
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "ccu-fn-scan",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "scan for CCU",
+    "func": "return (async()=>{\n  let base=flow.get('scan_subnet');\n  if(!base){ const ifs=os.networkInterfaces();\n    for(const nm of Object.keys(ifs)){ for(const a of ifs[nm]){\n      if(a.family==='IPv4' && !a.internal && /^(192\\.168|10\\.|172\\.(1[6-9]|2\\d|3[01]))\\./.test(a.address)){ base=a.address.split('.').slice(0,3).join('.'); break; } }\n      if(base) break; } }\n  if(!base){ node.status({fill:'red',shape:'ring',text:'no subnet'}); return [ {payload:'could not determine subnet'}, {payload:'⚠ Scan: subnet not found'} ]; }\n  node.status({fill:'blue',shape:'dot',text:'scanning '+base+'.0/24'});\n  const probe=async(ip)=>{const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),1200);\n      try{ const r=await fetch('http://'+ip+'/addons/xmlapi/version.cgi',{signal:ctrl.signal}); clearTimeout(t);\n        if(r.ok){ const x=await r.text(); return {ip, version:((x.match(/>([0-9.]+)</)||[])[1]||'?')}; } }catch(e){}\n      finally{ clearTimeout(t); } return null;};\n  const ips=[]; for(let i=1;i<=254;i++) ips.push(base+'.'+i);\n  const res=(await Promise.allSettled(ips.map(probe))).map(r=>r.value).filter(Boolean);\n  global.set('ccu_candidates',res);\n  if(res.length) flow.set('ccu_ip_pending', res[0].ip);\n  node.status({fill:res.length?'green':'yellow',shape:'dot',text:res.length+' CCU found'});\n  const line = res.length ? res.map(c=>c.ip).join(', ') : 'none found on '+base+'.0/24';\n  return [ {payload: 'Found: '+line}, {payload:'CCU scan: '+res.length+' found'} ];\n})();",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "os",
+        "module": "os"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-txt-cand"
+      ],
+      [
+        "sol-notify"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-fn-collect",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "collect ccu field",
+    "func": "if(msg.topic==='ip') flow.set('ccu_ip_pending', String(msg.payload||'').trim());\nelse if(msg.topic==='user') flow.set('ccu_user_pending', String(msg.payload||''));\nelse if(msg.topic==='pass') flow.set('ccu_pass_pending', String(msg.payload||''));\nreturn null;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "ccu-fn-connect",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "connect CCU",
+    "func": "return (async()=>{\n  const ip=(flow.get('ccu_ip_pending')||global.get('ccu_ip')||'').trim();\n  if(!ip) return {payload:'⚠ Enter the CCU IP first'};\n  const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),4000);\n  try{\n    const r=await fetch('http://'+ip+'/addons/xmlapi/version.cgi',{signal:ctrl.signal}); clearTimeout(t);\n    if(r.status===404) return {payload:'✗ CCU at '+ip+': XML-API addon not installed'};\n    if(!r.ok) return {payload:'✗ CCU at '+ip+': HTTP '+r.status};\n    const x=await r.text(); const ver=((x.match(/>([0-9.]+)</)||[])[1]||'?');\n    const store={ip, version:ver, user:flow.get('ccu_user_pending')||'', pass:flow.get('ccu_pass_pending')||''};\n    fs.writeFileSync('/secrets/ccu.json', JSON.stringify(store), {mode:0o600});\n    global.set('ccu_ip',ip); global.set('ccu_link',{state:'linked',ip,version:ver});\n    node.status({fill:'green',shape:'dot',text:'CCU '+ip+' v'+ver});\n    node.send([ {payload:'✓ CCU connected ('+ip+', v'+ver+')'}, {payload:{}} ]);\n    return null;\n  }catch(e){ clearTimeout(t); return {payload:'✗ No CCU reachable at '+ip}; }\n})();",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-notify"
+      ],
+      [
+        "ccu-fn-poll-req"
+      ]
+    ]
+  },
+  {
+    "id": "hue-btn-scan",
+    "type": "ui-button",
+    "z": "dp-tab",
+    "group": "hue-grp",
+    "name": "Scan network",
+    "label": "Scan network",
+    "order": 1,
+    "width": "6",
+    "height": "1",
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#334155",
+    "className": "",
+    "icon": "",
+    "payload": "scan",
+    "payloadType": "str",
+    "topic": "scan",
+    "topicType": "str",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "hue-fn-scan"
+      ]
+    ]
+  },
+  {
+    "id": "hue-txt-cand",
+    "type": "ui-text",
+    "z": "dp-tab",
+    "group": "hue-grp",
+    "name": "Found",
+    "label": "Found",
+    "order": 2,
+    "width": "6",
+    "height": "1",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": false,
+    "font": "",
+    "fontSize": 14,
+    "color": "",
+    "className": "",
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "hue-in-ip",
+    "type": "ui-text-input",
+    "z": "dp-tab",
+    "group": "hue-grp",
+    "name": "Hue bridge IP",
+    "label": "Hue bridge IP",
+    "tooltip": "",
+    "order": 3,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "mode": "text",
+    "delay": "400",
+    "topic": "ip",
+    "topicType": "str",
+    "sendOnBlur": true,
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "clearable": false,
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "hue-fn-collect"
+      ]
+    ]
+  },
+  {
+    "id": "hue-txt-hint",
+    "type": "ui-text",
+    "z": "dp-tab",
+    "group": "hue-grp",
+    "name": "",
+    "label": "",
+    "order": 4,
+    "width": "6",
+    "height": "1",
+    "format": "Press the round button on the Hue bridge, then Connect.",
+    "layout": "col-center",
+    "style": false,
+    "font": "",
+    "fontSize": 14,
+    "color": "",
+    "className": "",
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "hue-btn-connect",
+    "type": "ui-button",
+    "z": "dp-tab",
+    "group": "hue-grp",
+    "name": "Connect Hue",
+    "label": "Connect Hue",
+    "order": 5,
+    "width": "6",
+    "height": "1",
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#2563eb",
+    "className": "",
+    "icon": "",
+    "payload": "connect",
+    "payloadType": "str",
+    "topic": "connect",
+    "topicType": "str",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "hue-fn-connect"
+      ]
+    ]
+  },
+  {
+    "id": "hue-txt-status",
+    "type": "ui-text",
+    "z": "dp-tab",
+    "group": "hue-grp",
+    "name": "Status",
+    "label": "Status",
+    "order": 6,
+    "width": "6",
+    "height": "1",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": false,
+    "font": "",
+    "fontSize": 14,
+    "color": "",
+    "className": "",
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "hue-fn-scan",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "scan for Hue",
+    "func": "return (async()=>{\n  let base=flow.get('scan_subnet');\n  if(!base){ const ifs=os.networkInterfaces();\n    for(const nm of Object.keys(ifs)){ for(const a of ifs[nm]){\n      if(a.family==='IPv4' && !a.internal && /^(192\\.168|10\\.|172\\.(1[6-9]|2\\d|3[01]))\\./.test(a.address)){ base=a.address.split('.').slice(0,3).join('.'); break; } }\n      if(base) break; } }\n  if(!base){ node.status({fill:'red',shape:'ring',text:'no subnet'}); return [ {payload:'could not determine subnet'}, {payload:'⚠ Scan: subnet not found'} ]; }\n  node.status({fill:'blue',shape:'dot',text:'scanning '+base+'.0/24'});\n  const probe=async(ip)=>{const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),1200);\n      try{ const r=await fetch('http://'+ip+'/api/config',{signal:ctrl.signal}); clearTimeout(t);\n        if(r.ok){ const j=await r.json(); if(j && j.bridgeid && /^BSB/i.test(j.modelid||'')) return {ip, bridgeid:j.bridgeid, name:j.name}; } }catch(e){}\n      finally{ clearTimeout(t); } return null;};\n  const ips=[]; for(let i=1;i<=254;i++) ips.push(base+'.'+i);\n  const res=(await Promise.allSettled(ips.map(probe))).map(r=>r.value).filter(Boolean);\n  global.set('hue_candidates',res);\n  if(res.length) flow.set('hue_ip_pending', res[0].ip);\n  node.status({fill:res.length?'green':'yellow',shape:'dot',text:res.length+' Hue found'});\n  const line = res.length ? res.map(c=>c.ip).join(', ') : 'none found on '+base+'.0/24';\n  return [ {payload: 'Found: '+line}, {payload:'Hue scan: '+res.length+' found'} ];\n})();",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "os",
+        "module": "os"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "hue-txt-cand"
+      ],
+      [
+        "sol-notify"
+      ]
+    ]
+  },
+  {
+    "id": "hue-fn-collect",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "collect hue field",
+    "func": "if(msg.topic==='ip') flow.set('hue_ip_pending', String(msg.payload||'').trim());\nreturn null;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "hue-fn-connect",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "connect Hue",
+    "func": "return (async()=>{\n  const ip=(flow.get('hue_ip_pending')||global.get('hue_ip')||'').trim();\n  if(!ip) return {payload:'⚠ Enter the Hue bridge IP first'};\n  const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),5000);\n  try{\n    const r=await fetch('http://'+ip+'/api',{method:'POST',headers:{'Content-Type':'application/json'},\n      body:JSON.stringify({devicetype:'digitalhome-edge#nodered'}),signal:ctrl.signal}); clearTimeout(t);\n    const j=await r.json(); const row=Array.isArray(j)?j[0]:{};\n    if(row && row.success && row.success.username){\n      const key=row.success.username;\n      let bridgeid=null; try{ const c=await (await fetch('http://'+ip+'/api/config')).json(); bridgeid=c.bridgeid; }catch(e){}\n      const store={ip, api_key:key, bridgeid};\n      fs.writeFileSync('/secrets/hue.json', JSON.stringify(store), {mode:0o600});\n      global.set('hue_ip',ip); global.set('hue_api_key',key); global.set('hue_link',{state:'linked',ip,bridgeid});\n      node.status({fill:'green',shape:'dot',text:'Hue paired '+ip});\n      node.send([ {payload:'✓ Hue paired ('+ip+')'}, {payload:{}} ]);\n      return null;\n    }\n    if(row && row.error && row.error.type===101) return {payload:'Press the round button on the bridge, then Connect'};\n    return {payload:'✗ Hue pairing failed: '+JSON.stringify(row).slice(0,120)};\n  }catch(e){ clearTimeout(t); return {payload:'✗ No Hue bridge reachable at '+ip}; }\n})();",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-notify"
+      ],
+      [
+        "hue-fn-poll-req"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-inject-poll",
+    "type": "inject",
+    "z": "dp-tab",
+    "name": "CCU poll (30s)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "30",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "20",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-fn-poll-req"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-fn-poll-req",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "build CCU statelist req",
+    "func": "const ip=global.get('ccu_ip'); if(!ip){ return null; }\nmsg.method='GET'; msg.url='http://'+ip+'/addons/xmlapi/statelist.cgi'; msg.headers={}; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-http"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-http",
+    "type": "http request",
+    "z": "dp-tab",
+    "name": "GET statelist.cgi",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-xml"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-xml",
+    "type": "xml",
+    "z": "dp-tab",
+    "name": "parse statelist",
+    "property": "payload",
+    "attr": "",
+    "chr": "",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-fn-ingest"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-fn-ingest",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "CCU statelist → observations",
+    "func": "function coerce(v,vt){ if(v==null) return v; if(vt==='2'||vt===2) return (v==='true'||v===true);\n  const n=Number(v); return isNaN(n)?v:n; }\nconst root = msg.payload && (msg.payload.stateList||msg.payload.statelist||msg.payload.state);\nconst devices = root && root.device ? [].concat(root.device) : [];\nconst ts=Date.now(); const out=[]; let dp=0;\nfor(const dev of devices){ const da=dev.$||{}; const addr=da.name||da.ise_id||'unknown';\n  const chans = dev.channel ? [].concat(dev.channel) : [];\n  for(const ch of chans){ const ca=ch.$||{}; const idx=ca.index!=null?ca.index:'0';\n    const dps = ch.datapoint ? [].concat(ch.datapoint) : [];\n    const obs=[];\n    for(const d0 of dps){ const p=d0.$||d0; if(p.name==null) continue; obs.push({field:p.name, value:coerce(p.value,p.valuetype)}); dp++; }\n    if(obs.length) out.push({payload:{source:'ccu', device_id:addr+':'+idx, ts, observations:obs}});\n  }\n}\nglobal.set('ccu_latest',{ts:new Date(ts).toISOString(), devices:devices.length, datapoints:dp});\nnode.status({fill:'green',shape:'dot',text:devices.length+' dev / '+dp+' dp'});\nconst raw={payload:{ts:new Date(ts).toISOString(),source:'ccu',endpoint:'/addons/xmlapi/statelist.cgi',devices:devices.length,response:root||{}}, topic:'raw/ccu'};\nreturn [out, raw];",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "dp-abox-filter"
+      ],
+      [
+        "ccu-buffer-raw"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-buffer-raw",
+    "type": "subflow:sf-buffer-writer",
+    "z": "dp-tab",
+    "name": "→ /timeseries/raw/ccu/",
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "hue-inject-poll",
+    "type": "inject",
+    "z": "dp-tab",
+    "name": "Hue poll (30s)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "30",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "22",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "hue-fn-poll-req"
+      ]
+    ]
+  },
+  {
+    "id": "hue-fn-poll-req",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "build Hue sensor/light reqs",
+    "func": "const ip=global.get('hue_ip'); const key=global.get('hue_api_key');\nif(!ip||!key){ return null; }\nreturn [[\n  {method:'GET', url:'http://'+ip+'/api/'+key+'/sensors', headers:{}, topic:'sensors'},\n  {method:'GET', url:'http://'+ip+'/api/'+key+'/lights',  headers:{}, topic:'lights'}\n]];",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "hue-http"
+      ]
+    ]
+  },
+  {
+    "id": "hue-http",
+    "type": "http request",
+    "z": "dp-tab",
+    "name": "GET Hue sensors/lights",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": true,
+    "headers": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "hue-fn-ingest"
+      ]
+    ]
+  },
+  {
+    "id": "hue-fn-ingest",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "Hue sensors/lights → observations",
+    "func": "const topic=msg.topic; const data=msg.payload||{}; const ts=Date.now(); const out=[];\nif(topic==='sensors'){\n  for(const [id,s] of Object.entries(data)){ if(!s||typeof s!=='object'||!s.state) continue;\n    const st=s.state; const obs=Object.keys(st).filter(k=>!/^last(updated|announced)$/.test(k)&&st[k]!=null).map(k=>({field:k,value:st[k]}));\n    if(s.config && s.config.battery!=null) obs.push({field:'battery',value:s.config.battery});\n    const dev=s.uniqueid||('sensor-'+id);\n    if(obs.length) out.push({payload:{source:'hue',device_id:String(dev),ts,observations:obs}});\n  }\n}else if(topic==='lights'){\n  for(const [id,l] of Object.entries(data)){ if(!l||typeof l!=='object'||!l.state) continue;\n    const st=l.state; const obs=Object.keys(st).filter(k=>st[k]!=null&&['on','bri','ct','reachable'].includes(k)).map(k=>({field:k,value:st[k]}));\n    const dev=l.uniqueid||('light-'+id);\n    if(obs.length) out.push({payload:{source:'hue',device_id:String(dev),ts,observations:obs}});\n  }\n}\nconst cur=global.get('hue_latest')||{}; cur.ts=new Date(ts).toISOString(); cur[topic]=Object.keys(data).length; global.set('hue_latest',cur);\nnode.status({fill:'green',shape:'dot',text:topic+': '+Object.keys(data).length});\nconst raw={payload:{ts:new Date(ts).toISOString(),source:'hue',endpoint:'/api/*/'+topic,response:data}, topic:'raw/hue'};\nreturn [out, raw];",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "dp-abox-filter"
+      ],
+      [
+        "hue-buffer-raw"
+      ]
+    ]
+  },
+  {
+    "id": "hue-buffer-raw",
+    "type": "subflow:sf-buffer-writer",
+    "z": "dp-tab",
+    "name": "→ /timeseries/raw/hue/",
+    "x": 0,
+    "y": 0,
     "wires": []
   }
 ]
