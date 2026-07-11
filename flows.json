@@ -3609,6 +3609,177 @@
     "className": ""
   },
   {
+    "id": "sol-in-email",
+    "type": "ui-text-input",
+    "z": "dp-tab",
+    "group": "sol-grp-connect",
+    "name": "Email",
+    "label": "Email",
+    "tooltip": "",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "passthru": false,
+    "mode": "email",
+    "delay": 0,
+    "topic": "email",
+    "topicType": "str",
+    "sendOnBlur": true,
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "clearable": false,
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-fn-collect"
+      ]
+    ]
+  },
+  {
+    "id": "sol-in-pass",
+    "type": "ui-text-input",
+    "z": "dp-tab",
+    "group": "sol-grp-connect",
+    "name": "Password",
+    "label": "Password",
+    "tooltip": "",
+    "order": 2,
+    "width": 0,
+    "height": 0,
+    "passthru": false,
+    "mode": "password",
+    "delay": 0,
+    "topic": "password",
+    "topicType": "str",
+    "sendOnBlur": true,
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "clearable": false,
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-fn-collect"
+      ]
+    ]
+  },
+  {
+    "id": "sol-btn-connect",
+    "type": "ui-button",
+    "z": "dp-tab",
+    "group": "sol-grp-connect",
+    "name": "Connect",
+    "label": "Connect",
+    "order": 3,
+    "width": 0,
+    "height": 1,
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#2563eb",
+    "className": "",
+    "icon": "",
+    "payload": "connect",
+    "payloadType": "str",
+    "topic": "connect",
+    "topicType": "str",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-fn-build"
+      ]
+    ]
+  },
+  {
+    "id": "sol-btn-disc",
+    "type": "ui-button",
+    "z": "dp-tab",
+    "group": "sol-grp-connect",
+    "name": "Disconnect",
+    "label": "Disconnect",
+    "order": 4,
+    "width": 0,
+    "height": 1,
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#64748b",
+    "className": "",
+    "icon": "",
+    "payload": "disconnect",
+    "payloadType": "str",
+    "topic": "disconnect",
+    "topicType": "str",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-fn-build"
+      ]
+    ]
+  },
+  {
+    "id": "sol-fn-collect",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "collect field",
+    "func": "// stash each field in flow context, keyed by the input's topic\nif (msg.topic === 'email') flow.set('sol_email', String(msg.payload||'').trim());\nelse if (msg.topic === 'password') flow.set('sol_pass', String(msg.payload||''));\nreturn null;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sol-fn-build",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "button → connect cmd",
+    "func": "// a Connect/Disconnect button was pressed -> hand a command to sm-fn-connect\nif (msg.topic === 'disconnect' || msg.payload === 'disconnect') {\n    msg.payload = { action: 'disconnect' };\n} else {\n    msg.payload = { action: 'connect', email: flow.get('sol_email') || '', password: flow.get('sol_pass') || '' };\n    flow.set('sol_pass', '');   // don't retain the password in flow context\n}\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sm-fn-connect"
+      ]
+    ]
+  },
+  {
+    "id": "sol-txt-status",
+    "type": "ui-text",
+    "z": "dp-tab",
+    "group": "sol-grp-status",
+    "name": "Status",
+    "label": "Status",
+    "order": 1,
+    "width": 0,
+    "height": 1,
+    "format": "{{msg.payload.summary}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "",
+    "className": "",
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
     "id": "sol-page-config",
     "type": "ui-page",
     "name": "Configuration",
@@ -3709,54 +3880,6 @@
     "order": 2,
     "showTitle": true,
     "className": ""
-  },
-  {
-    "id": "sol-tmpl-connect",
-    "type": "ui-template",
-    "group": "sol-grp-connect",
-    "page": "",
-    "ui": "",
-    "name": "Solar connect card",
-    "order": 1,
-    "width": 0,
-    "height": 0,
-    "head": "",
-    "storeOutMessages": true,
-    "passthru": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "className": "",
-    "format": "<template>\n  <v-card flat>\n    <v-card-title>Connect Solarman</v-card-title>\n    <v-card-text v-if=\"state === 'linked'\">\n      <v-alert type=\"success\" variant=\"tonal\" density=\"compact\">\n        Connected as {{ email }}. Manage below or disconnect to switch accounts.\n      </v-alert>\n      <v-btn class=\"mt-3\" color=\"error\" variant=\"tonal\" @click=\"disconnect\">Disconnect</v-btn>\n    </v-card-text>\n    <v-card-text v-else>\n      <p class=\"mb-2\">Sign in with your personal Solarman account (the Solarman Smart app login).\n      Your password is exchanged for a token and never stored.</p>\n      <v-text-field v-model=\"email\" label=\"Email\" density=\"compact\" variant=\"outlined\" />\n      <v-text-field v-model=\"password\" label=\"Password\" type=\"password\" density=\"compact\" variant=\"outlined\" />\n      <v-alert v-if=\"state === 'error'\" type=\"error\" variant=\"tonal\" density=\"compact\" class=\"mb-2\">{{ message }}</v-alert>\n      <v-btn color=\"primary\" :loading=\"state === 'connecting'\" :disabled=\"!email || !password\" @click=\"connect\">Connect</v-btn>\n    </v-card-text>\n  </v-card>\n</template>\n<script>\nexport default {\n  data() { return { email: '', password: '', state: 'unlinked', message: '' }; },\n  watch: {\n    msg(m) {\n      if (!m || !m.payload) return;\n      this.state = m.payload.state || this.state;\n      this.message = m.payload.message || '';\n      if (m.payload.email && !this.email) this.email = m.payload.email;\n    }\n  },\n  methods: {\n    connect() { this.state = 'connecting'; this.send({ payload: { action: 'connect', email: this.email, password: this.password } }); this.password = ''; },\n    disconnect() { this.send({ payload: { action: 'disconnect' } }); }\n  }\n};\n</script>",
-    "x": 0,
-    "y": 0,
-    "wires": [
-      [
-        "sm-fn-connect"
-      ]
-    ]
-  },
-  {
-    "id": "sol-tmpl-status",
-    "type": "ui-template",
-    "group": "sol-grp-status",
-    "page": "",
-    "ui": "",
-    "name": "Solar status card",
-    "order": 1,
-    "width": 0,
-    "height": 0,
-    "head": "",
-    "storeOutMessages": true,
-    "passthru": true,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "className": "",
-    "format": "<template>\n  <v-card flat>\n    <v-card-title>\n      <span v-if=\"p.state === 'linked'\">Solar ✓</span>\n      <span v-else-if=\"p.state === 'connecting'\">Connecting…</span>\n      <span v-else-if=\"p.state === 'error'\">Not connected</span>\n      <span v-else>Not connected</span>\n    </v-card-title>\n    <v-card-text v-if=\"p.state === 'linked'\">\n      <v-list density=\"compact\">\n        <v-list-item><v-list-item-title>Account</v-list-item-title><v-list-item-subtitle>{{ p.email }}</v-list-item-subtitle></v-list-item>\n        <v-list-item><v-list-item-title>Stations</v-list-item-title><v-list-item-subtitle>{{ p.stations ?? 0 }}</v-list-item-subtitle></v-list-item>\n        <v-list-item v-if=\"p.last_poll\"><v-list-item-title>Last poll</v-list-item-title><v-list-item-subtitle>{{ p.last_poll }}</v-list-item-subtitle></v-list-item>\n        <v-list-item v-if=\"p.token_expires\"><v-list-item-title>Token valid until</v-list-item-title><v-list-item-subtitle>{{ p.token_expires }}</v-list-item-subtitle></v-list-item>\n      </v-list>\n    </v-card-text>\n    <v-card-text v-else><p>Use the Connect card to sign in with your Solarman account.</p></v-card-text>\n  </v-card>\n</template>\n<script>\nexport default { data(){return{p:{state:'unlinked'}};}, watch:{ msg(m){ if(m&&m.payload) this.p=m.payload; } } };\n</script>",
-    "x": 0,
-    "y": 0,
-    "wires": [
-      []
-    ]
   },
   {
     "id": "sm-inject-boot",
@@ -3878,7 +4001,7 @@
     "type": "function",
     "z": "dp-tab",
     "name": "broadcast solar state",
-    "func": "// Broadcast the solar link state to both dashboard cards.\nconst s = global.get('solar_link_state') || { state: 'unlinked' };\nconst latest = global.get('solar_latest');\nconst tok = global.get('solarman_token');\nconst stations = (global.get('solarman_stations') || []).length;\nmsg.payload = {\n    state: s.state || 'unlinked',\n    email: s.email || '',\n    message: s.message || '',\n    stations: stations,\n    last_poll: latest && latest.ts,\n    token_expires: tok && tok.exp ? new Date(tok.exp).toISOString() : null\n};\nreturn msg;\n",
+    "func": "const s = global.get('solar_link_state') || { state: 'unlinked' };\nconst latest = global.get('solar_latest');\nconst tok = global.get('solarman_token');\nconst stations = (global.get('solarman_stations') || []).length;\nconst map = { unlinked:'Not connected — enter your Solarman email + password and press Connect.',\n              connecting:'Connecting…', linked:'Connected ✓', error:('Error: '+(s.message||'connect failed')) };\nmsg.payload = { state: s.state, email: s.email||'', stations,\n    last_poll: latest && latest.ts, token_expires: tok&&tok.exp? new Date(tok.exp).toISOString():null,\n    summary: (map[s.state]||s.state) + (s.state==='linked'? ('  ('+(s.email||'')+', '+stations+' stations)') : '') };\nreturn msg;\n",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
@@ -3888,8 +4011,7 @@
     "y": 0,
     "wires": [
       [
-        "sol-tmpl-connect",
-        "sol-tmpl-status"
+        "sol-txt-status"
       ]
     ]
   },
