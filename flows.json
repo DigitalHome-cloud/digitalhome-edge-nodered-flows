@@ -2771,7 +2771,7 @@
   {
     "id": "dhc-ui-page-pairing",
     "type": "ui-page",
-    "name": "Pairing",
+    "name": "Connections",
     "ui": "dhc-ui-base",
     "path": "/pairing",
     "icon": "link-variant",
@@ -2785,7 +2785,7 @@
   {
     "id": "dhc-ui-group-pairing",
     "type": "ui-group",
-    "name": "Pairing",
+    "name": "Cloud — Setup",
     "page": "dhc-ui-page-pairing",
     "width": "12",
     "height": "1",
@@ -2798,7 +2798,7 @@
   {
     "id": "dhc-ui-group-linked",
     "type": "ui-group",
-    "name": "Edge status",
+    "name": "Cloud — Status",
     "page": "dhc-ui-page-pairing",
     "width": "12",
     "height": "1",
@@ -3178,55 +3178,6 @@
     "wires": []
   },
   {
-    "id": "sm-inject-token",
-    "type": "inject",
-    "z": "dp-tab",
-    "name": "token: boot + daily",
-    "props": [
-      {
-        "p": "payload"
-      }
-    ],
-    "repeat": "86400",
-    "crontab": "",
-    "once": true,
-    "onceDelay": "3",
-    "topic": "",
-    "payload": "",
-    "payloadType": "date",
-    "x": 300,
-    "y": 660,
-    "wires": [
-      [
-        "sm-fn-token"
-      ]
-    ]
-  },
-  {
-    "id": "sm-fn-token",
-    "type": "function",
-    "z": "dp-tab",
-    "name": "build token request",
-    "func": "// Build the Solarman token request. Reads non-secret config from /config and the\n// two secrets from /secrets (never logged, never written to timeseries).\n// fs is injected via the node's libs config.\nfunction readf(p){ try { return fs.readFileSync(p,'utf8').trim(); } catch(e){ return ''; } }\nlet cfg = {};\ntry { cfg = (JSON.parse(fs.readFileSync('/config/dhe.config.cache','utf8')).solar) || {}; }\ncatch(e){ node.error('config cache unreadable: ' + e.message); node.status({fill:'red',shape:'ring',text:'no config'}); return null; }\nconst base = cfg.base_url || 'https://globalapi.solarmanpv.com';\nconst appId = cfg.app_id;\nconst email = cfg.email;\nconst appSecret = readf('/secrets/solarman-app-secret');\nconst passwordHash = readf('/secrets/solarman-password-hash');\nif (!appId || !email || !appSecret || !passwordHash) {\n    node.error('solar credentials incomplete (need app_id+email in config, app-secret+password-hash in secrets)');\n    node.status({fill:'red',shape:'ring',text:'creds missing'});\n    return null;\n}\nglobal.set('solar_cfg', { base_url: base, poll_interval_s: cfg.poll_interval_s || 300 });\nmsg.method = 'POST';\nmsg.url = base + '/account/v1.0/token?appId=' + encodeURIComponent(appId) + '&language=en';\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = { appSecret: appSecret, email: email, password: passwordHash };\nnode.status({fill:'blue',shape:'dot',text:'requesting token'});\nreturn msg;\n",
-    "outputs": 1,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [
-      {
-        "var": "fs",
-        "module": "fs"
-      }
-    ],
-    "x": 540,
-    "y": 660,
-    "wires": [
-      [
-        "sm-http-token"
-      ]
-    ]
-  },
-  {
     "id": "sm-http-token",
     "type": "http request",
     "z": "dp-tab",
@@ -3255,17 +3206,25 @@
     "type": "function",
     "z": "dp-tab",
     "name": "store token",
-    "func": "const r = msg.payload || {};\nif (!r.access_token) {\n    node.error('token request failed: ' + JSON.stringify(r).slice(0, 200));\n    node.status({fill:'red',shape:'ring',text:'token failed'});\n    return null;\n}\nconst ttl = (typeof r.expires_in === 'number' ? r.expires_in : 3600) * 1000;\nglobal.set('solarman_token', { bearer: r.access_token, exp: Date.now() + ttl - 60000 });\nnode.status({fill:'green',shape:'dot',text:'token ok'});\n// kick station discovery\nreturn { payload: {} };\n",
-    "outputs": 1,
+    "func": "const r = msg.payload || {};\nif (!r.access_token) {\n    const emsg = (r.msg || r.error || 'authentication failed');\n    global.set('solar_link_state', { state: 'error', message: emsg, email: msg._solar_email });\n    node.status({fill:'red',shape:'ring',text:'auth failed'});\n    return [ null, { payload: { state:'error', message: emsg } } ];\n}\nconst ttl = (typeof r.expires_in === 'number' ? r.expires_in : 5184000) * 1000; // ~2 months default\nconst store = { access_token: r.access_token, refresh_token: r.refresh_token || null,\n                expires_at: Date.now() + ttl, uid: r.uid || null, email: msg._solar_email };\ntry { fs.writeFileSync('/secrets/solarman-token.json', JSON.stringify(store), { mode: 0o600 }); } catch(e) { node.error('token store write failed: '+e.message); }\nglobal.set('solarman_token', { bearer: r.access_token, exp: store.expires_at, refresh: store.refresh_token });\nglobal.set('solar_link_state', { state: 'linked', email: msg._solar_email });\nnode.status({fill:'green',shape:'dot',text:'linked ('+msg._solar_email+')'});\n// out1 -> station discovery trigger ; out2 -> http response\nreturn [ { payload: {} }, { payload: { state:'linked' } } ];\n",
+    "outputs": 2,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
-    "libs": [],
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
     "x": 980,
     "y": 660,
     "wires": [
       [
         "sm-fn-list-req"
+      ],
+      [
+        "sm-fn-state"
       ]
     ]
   },
@@ -3598,17 +3557,22 @@
     "type": "function",
     "z": "dp-tab",
     "name": "on 401/403 → re-auth",
-    "func": "const code = msg.statusCode || (msg.error && msg.error.statusCode);\nnode.warn('solarman http error: ' + ((msg.error && msg.error.message) || code));\nif (code === 401 || code === 403) { global.set('solarman_token', null); return msg; }\nreturn null;\n",
+    "func": "const code = msg.statusCode || (msg.error && msg.error.statusCode);\nnode.warn('solarman http error: ' + ((msg.error && msg.error.message) || code));\nif (code === 401 || code === 403) {\n    global.set('solarman_token', null);\n    global.set('solar_link_state', { state: 'unlinked', message: 'session expired — please reconnect' });\n    try { fs.unlinkSync('/secrets/solarman-token.json'); } catch(e) {}\n    return { payload: {} };\n}\nreturn null;\n",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
-    "libs": [],
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
     "x": 560,
     "y": 1030,
     "wires": [
       [
-        "sm-fn-token"
+        "sm-fn-state"
       ]
     ]
   },
@@ -3623,6 +3587,634 @@
     "wires": []
   },
   {
+    "id": "sol-grp-connect",
+    "type": "ui-group",
+    "name": "Solar — Connect",
+    "page": "dhc-ui-page-pairing",
+    "width": "6",
+    "height": "1",
+    "order": 3,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "sol-grp-status",
+    "type": "ui-group",
+    "name": "Solar — Status",
+    "page": "dhc-ui-page-pairing",
+    "width": "6",
+    "height": "1",
+    "order": 4,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "sol-page-config",
+    "type": "ui-page",
+    "name": "Configuration",
+    "ui": "dhc-ui-base",
+    "path": "/config",
+    "icon": "cog",
+    "layout": "grid",
+    "theme": "ui-theme-dark",
+    "order": 11,
+    "className": ""
+  },
+  {
+    "id": "sol-grp-cfg-edge",
+    "type": "ui-group",
+    "name": "Edge Config (redacted)",
+    "page": "sol-page-config",
+    "width": "6",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "sol-grp-cfg-maps",
+    "type": "ui-group",
+    "name": "Field Mappings (source → T-BOX)",
+    "page": "sol-page-config",
+    "width": "6",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "sol-page-native",
+    "type": "ui-page",
+    "name": "Native Data",
+    "ui": "dhc-ui-base",
+    "path": "/native",
+    "icon": "database-eye",
+    "layout": "grid",
+    "theme": "ui-theme-dark",
+    "order": 9,
+    "className": ""
+  },
+  {
+    "id": "sol-grp-native-solar",
+    "type": "ui-group",
+    "name": "Solar — Raw reading",
+    "page": "sol-page-native",
+    "width": "6",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "sol-grp-native-unmapped",
+    "type": "ui-group",
+    "name": "Unmapped fields (review queue)",
+    "page": "sol-page-native",
+    "width": "6",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "sol-page-mapped",
+    "type": "ui-page",
+    "name": "Mapped Data",
+    "ui": "dhc-ui-base",
+    "path": "/mapped",
+    "icon": "sitemap",
+    "layout": "grid",
+    "theme": "ui-theme-dark",
+    "order": 10,
+    "className": ""
+  },
+  {
+    "id": "sol-grp-mapped-obs",
+    "type": "ui-group",
+    "name": "Observations (Brick points)",
+    "page": "sol-page-mapped",
+    "width": "8",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "sol-grp-mapped-counts",
+    "type": "ui-group",
+    "name": "Pipeline throughput",
+    "page": "sol-page-mapped",
+    "width": "4",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "sol-tmpl-connect",
+    "type": "ui-template",
+    "group": "sol-grp-connect",
+    "page": "",
+    "ui": "",
+    "name": "Solar connect card",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "format": "<template>\n  <v-card flat>\n    <v-card-title>Connect Solarman</v-card-title>\n    <v-card-text v-if=\"state === 'linked'\">\n      <v-alert type=\"success\" variant=\"tonal\" density=\"compact\">\n        Connected as {{ email }}. Manage below or disconnect to switch accounts.\n      </v-alert>\n      <v-btn class=\"mt-3\" color=\"error\" variant=\"tonal\" @click=\"disconnect\">Disconnect</v-btn>\n    </v-card-text>\n    <v-card-text v-else>\n      <p class=\"mb-2\">Sign in with your personal Solarman account (the Solarman Smart app login).\n      Your password is exchanged for a token and never stored.</p>\n      <v-text-field v-model=\"email\" label=\"Email\" density=\"compact\" variant=\"outlined\" />\n      <v-text-field v-model=\"password\" label=\"Password\" type=\"password\" density=\"compact\" variant=\"outlined\" />\n      <v-alert v-if=\"state === 'error'\" type=\"error\" variant=\"tonal\" density=\"compact\" class=\"mb-2\">{{ message }}</v-alert>\n      <v-btn color=\"primary\" :loading=\"state === 'connecting'\" :disabled=\"!email || !password\" @click=\"connect\">Connect</v-btn>\n    </v-card-text>\n  </v-card>\n</template>\n<script>\nexport default {\n  data() { return { email: '', password: '', state: 'unlinked', message: '' }; },\n  watch: {\n    msg(m) {\n      if (!m || !m.payload) return;\n      this.state = m.payload.state || this.state;\n      this.message = m.payload.message || '';\n      if (m.payload.email && !this.email) this.email = m.payload.email;\n    }\n  },\n  methods: {\n    connect() { this.state = 'connecting'; this.send({ payload: { action: 'connect', email: this.email, password: this.password } }); this.password = ''; },\n    disconnect() { this.send({ payload: { action: 'disconnect' } }); }\n  }\n};\n</script>",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sm-fn-connect"
+      ]
+    ]
+  },
+  {
+    "id": "sol-tmpl-status",
+    "type": "ui-template",
+    "group": "sol-grp-status",
+    "page": "",
+    "ui": "",
+    "name": "Solar status card",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "format": "<template>\n  <v-card flat>\n    <v-card-title>\n      <span v-if=\"p.state === 'linked'\">Solar ✓</span>\n      <span v-else-if=\"p.state === 'connecting'\">Connecting…</span>\n      <span v-else-if=\"p.state === 'error'\">Not connected</span>\n      <span v-else>Not connected</span>\n    </v-card-title>\n    <v-card-text v-if=\"p.state === 'linked'\">\n      <v-list density=\"compact\">\n        <v-list-item><v-list-item-title>Account</v-list-item-title><v-list-item-subtitle>{{ p.email }}</v-list-item-subtitle></v-list-item>\n        <v-list-item><v-list-item-title>Stations</v-list-item-title><v-list-item-subtitle>{{ p.stations ?? 0 }}</v-list-item-subtitle></v-list-item>\n        <v-list-item v-if=\"p.last_poll\"><v-list-item-title>Last poll</v-list-item-title><v-list-item-subtitle>{{ p.last_poll }}</v-list-item-subtitle></v-list-item>\n        <v-list-item v-if=\"p.token_expires\"><v-list-item-title>Token valid until</v-list-item-title><v-list-item-subtitle>{{ p.token_expires }}</v-list-item-subtitle></v-list-item>\n      </v-list>\n    </v-card-text>\n    <v-card-text v-else><p>Use the Connect card to sign in with your Solarman account.</p></v-card-text>\n  </v-card>\n</template>\n<script>\nexport default { data(){return{p:{state:'unlinked'}};}, watch:{ msg(m){ if(m&&m.payload) this.p=m.payload; } } };\n</script>",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sm-inject-boot",
+    "type": "inject",
+    "z": "dp-tab",
+    "name": "solar: load token on boot",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "3",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sm-fn-token-load"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-token-load",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "load token store",
+    "func": "// On boot, load /secrets/solarman-token.json (written by the dashboard login).\n// If a valid token is present -> LINKED and start polling; else UNLINKED.\nlet cfg = {};\ntry { cfg = (JSON.parse(fs.readFileSync('/config/dhe.config.cache','utf8')).solar) || {}; } catch(e) {}\nglobal.set('solar_cfg', { base_url: cfg.base_url || 'https://globalapi.solarmanpv.com', poll_interval_s: cfg.poll_interval_s || 300 });\nlet store = null;\ntry { store = JSON.parse(fs.readFileSync('/secrets/solarman-token.json','utf8')); } catch(e) {}\nif (store && store.access_token && (!store.expires_at || Date.now() < store.expires_at)) {\n    global.set('solarman_token', { bearer: store.access_token, exp: store.expires_at || (Date.now()+3600000), refresh: store.refresh_token });\n    global.set('solar_link_state', { state: 'linked', email: store.email || '' });\n    node.status({fill:'green',shape:'dot',text:'linked ('+(store.email||'')+')'});\n    return { payload: {} };   // -> trigger station discovery\n}\nglobal.set('solar_link_state', { state: 'unlinked' });\nnode.status({fill:'grey',shape:'ring',text:'unlinked — awaiting dashboard login'});\nreturn null;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sm-fn-list-req"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-connect",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "dashboard login → token req",
+    "func": "// Handle the dashboard Solar card. action=connect -> build a token request from\n// the entered email+password (password hashed here, never persisted). action=disconnect\n// -> wipe the token store. crypto + fs injected via libs.\nconst body = msg.payload || {};\nif (body.action === 'disconnect') {\n    try { fs.unlinkSync('/secrets/solarman-token.json'); } catch(e) {}\n    global.set('solarman_token', null);\n    global.set('solar_link_state', { state: 'unlinked' });\n    node.status({fill:'grey',shape:'ring',text:'disconnected'});\n    return null;\n}\nconst email = (body.email || '').trim();\nconst password = body.password || '';\nif (!email || !password) { global.set('solar_link_state', {state:'error', message:'email and password required'}); return null; }\nlet cfg = {};\ntry { cfg = (JSON.parse(fs.readFileSync('/config/dhe.config.cache','utf8')).solar) || {}; } catch(e) {}\nconst base = cfg.base_url || 'https://globalapi.solarmanpv.com';\nconst appId = cfg.app_id;\nlet appSecret = '';\ntry { appSecret = fs.readFileSync('/secrets/solarman-app-secret','utf8').trim(); } catch(e) {}\nif (!appId || !appSecret) { global.set('solar_link_state', {state:'error', message:'app_id/app-secret not configured on the edge'}); return null; }\nglobal.set('solar_cfg', { base_url: base, poll_interval_s: cfg.poll_interval_s || 300 });\nglobal.set('solar_link_state', { state: 'connecting', email: email });\nconst hash = crypto.createHash('sha256').update(password).digest('hex');\nmsg._solar_email = email;\nmsg.method = 'POST';\nmsg.url = base + '/account/v1.0/token?appId=' + encodeURIComponent(appId) + '&language=en';\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = { appSecret: appSecret, email: email, password: hash };\nnode.status({fill:'blue',shape:'dot',text:'authenticating ' + email});\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      },
+      {
+        "var": "crypto",
+        "module": "crypto"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sm-http-token"
+      ]
+    ]
+  },
+  {
+    "id": "sm-connect-out",
+    "type": "http response",
+    "z": "dp-tab",
+    "name": "",
+    "statusCode": "",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "sm-inject-state",
+    "type": "inject",
+    "z": "dp-tab",
+    "name": "solar: broadcast state (3s)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "4",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sm-fn-state"
+      ]
+    ]
+  },
+  {
+    "id": "sm-fn-state",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "broadcast solar state",
+    "func": "// Broadcast the solar link state to both dashboard cards.\nconst s = global.get('solar_link_state') || { state: 'unlinked' };\nconst latest = global.get('solar_latest');\nconst tok = global.get('solarman_token');\nconst stations = (global.get('solarman_stations') || []).length;\nmsg.payload = {\n    state: s.state || 'unlinked',\n    email: s.email || '',\n    message: s.message || '',\n    stations: stations,\n    last_poll: latest && latest.ts,\n    token_expires: tok && tok.exp ? new Date(tok.exp).toISOString() : null\n};\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-tmpl-connect",
+        "sol-tmpl-status"
+      ]
+    ]
+  },
+  {
+    "id": "sol-fn-tap-mapped",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "tap: recent mapped",
+    "func": "const buf = global.get('recent_mapped') || [];\nbuf.unshift(msg.payload); if (buf.length > 20) buf.length = 20;\nglobal.set('recent_mapped', buf); return null;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sol-fn-tap-unmapped",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "tap: recent unmapped",
+    "func": "const buf = global.get('recent_unmapped') || [];\nbuf.unshift(msg.payload); if (buf.length > 20) buf.length = 20;\nglobal.set('recent_unmapped', buf); return null;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sol-fn-native-solar",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "feed: solar raw",
+    "func": "msg.payload = global.get('solar_latest') || { note: 'no reading yet' };\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-tmpl-native-solar"
+      ]
+    ]
+  },
+  {
+    "id": "sol-tmpl-native-solar",
+    "type": "ui-template",
+    "group": "sol-grp-native-solar",
+    "page": "",
+    "ui": "",
+    "name": "Solar raw card",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "format": "<template>\n  <v-card flat><v-card-title>Solar — latest raw</v-card-title>\n  <v-card-text>\n    <div v-if=\"p.station_id\">\n      <div class=\"text-caption\">station {{ p.station_id }} · {{ p.ts }}</div>\n      <pre style=\"white-space:pre-wrap;font-size:12px\">{{ JSON.stringify(p.data, null, 1) }}</pre>\n    </div>\n    <div v-else>No reading yet — connect Solarman and wait for a poll.</div>\n  </v-card-text></v-card>\n</template>\n<script>export default{data(){return{p:{}};},watch:{msg(m){if(m&&m.payload)this.p=m.payload;}}};</script>",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sol-fn-native-unmapped",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "feed: recent unmapped",
+    "func": "msg.payload = global.get('recent_unmapped') || []; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-tmpl-native-unmapped"
+      ]
+    ]
+  },
+  {
+    "id": "sol-tmpl-native-unmapped",
+    "type": "ui-template",
+    "group": "sol-grp-native-unmapped",
+    "page": "",
+    "ui": "",
+    "name": "Unmapped card",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "format": "<template>\n  <v-card flat><v-card-title>Unmapped fields</v-card-title>\n  <v-card-text>\n    <v-table density=\"compact\"><thead><tr><th>source</th><th>device</th><th>field</th><th>value</th><th>reason</th></tr></thead>\n    <tbody><tr v-for=\"(o,i) in rows\" :key=\"i\"><td>{{o.source}}</td><td>{{o.device_id}}</td><td>{{o.field}}</td><td>{{o.value}}</td><td>{{o.reason}}</td></tr></tbody></v-table>\n    <div v-if=\"!rows.length\">Nothing unmapped — every field resolved to a Brick point.</div>\n  </v-card-text></v-card>\n</template>\n<script>export default{data(){return{rows:[]};},watch:{msg(m){if(m&&Array.isArray(m.payload))this.rows=m.payload;}}};</script>",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sol-fn-mapped-obs",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "feed: recent mapped",
+    "func": "msg.payload = global.get('recent_mapped') || []; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-tmpl-mapped-obs"
+      ]
+    ]
+  },
+  {
+    "id": "sol-tmpl-mapped-obs",
+    "type": "ui-template",
+    "group": "sol-grp-mapped-obs",
+    "page": "",
+    "ui": "",
+    "name": "Mapped observations card",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "format": "<template>\n  <v-card flat><v-card-title>Recent Brick observations</v-card-title>\n  <v-card-text>\n    <v-table density=\"compact\"><thead><tr><th>@type</th><th>capability</th><th>value</th><th>unit</th><th>source</th><th>observedAt</th></tr></thead>\n    <tbody><tr v-for=\"(o,i) in rows\" :key=\"i\"><td>{{o['@type']}}</td><td>{{o['dhc:capability']}}</td><td>{{o['dhc:value']}}</td><td>{{o['dhc:unit']}}</td><td>{{o['dhc:source']}}</td><td>{{o['dhc:observedAt']}}</td></tr></tbody></v-table>\n    <div v-if=\"!rows.length\">No observations yet.</div>\n  </v-card-text></v-card>\n</template>\n<script>export default{data(){return{rows:[]};},watch:{msg(m){if(m&&Array.isArray(m.payload))this.rows=m.payload;}}};</script>",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sol-fn-counts",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "feed: pipeline counts",
+    "func": "const c = flow.get('aboxFilterCounts', 'sf-abox-filter') || { mapped: 0, unmapped: 0 };\nconst idx = global.get('aboxIndex') || {};\nmsg.payload = { mapped: c.mapped, unmapped: c.unmapped, sources: (idx.sources||[]).join(', '),\n                capabilities: idx.counts && idx.counts.capability, fields: idx.counts && idx.counts.sourceMap };\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-tmpl-counts"
+      ]
+    ]
+  },
+  {
+    "id": "sol-tmpl-counts",
+    "type": "ui-template",
+    "group": "sol-grp-mapped-counts",
+    "page": "",
+    "ui": "",
+    "name": "Pipeline counts card",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "format": "<template>\n  <v-card flat><v-card-title>Pipeline</v-card-title><v-card-text>\n    <v-list density=\"compact\">\n      <v-list-item><v-list-item-title>Mapped</v-list-item-title><v-list-item-subtitle>{{p.mapped}}</v-list-item-subtitle></v-list-item>\n      <v-list-item><v-list-item-title>Unmapped</v-list-item-title><v-list-item-subtitle>{{p.unmapped}}</v-list-item-subtitle></v-list-item>\n      <v-list-item><v-list-item-title>Sources</v-list-item-title><v-list-item-subtitle>{{p.sources}}</v-list-item-subtitle></v-list-item>\n      <v-list-item><v-list-item-title>Mapping fields</v-list-item-title><v-list-item-subtitle>{{p.fields}}</v-list-item-subtitle></v-list-item>\n    </v-list></v-card-text></v-card>\n</template>\n<script>export default{data(){return{p:{}};},watch:{msg(m){if(m&&m.payload)this.p=m.payload;}}};</script>",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sol-fn-config",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "feed: redacted config",
+    "func": "let cfg = {};\ntry { cfg = JSON.parse(fs.readFileSync('/config/dhe.config.cache','utf8')); } catch(e) { cfg = {error:e.message}; }\nconst RED = new Set(['api_key','credential_secret','auth_token','admin_password','http_password','password','email']);\nconst redact = (o) => Array.isArray(o) ? o.map(redact)\n    : (o && typeof o === 'object') ? Object.fromEntries(Object.entries(o).map(([k,v]) => [k, RED.has(k) && v ? '***' : redact(v)]))\n    : o;\nmsg.payload = redact(cfg); return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-tmpl-config"
+      ]
+    ]
+  },
+  {
+    "id": "sol-tmpl-config",
+    "type": "ui-template",
+    "group": "sol-grp-cfg-edge",
+    "page": "",
+    "ui": "",
+    "name": "Config viewer card",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "format": "<template>\n  <v-card flat><v-card-title>Edge config (secrets redacted)</v-card-title>\n  <v-card-text><pre style=\"white-space:pre-wrap;font-size:12px\">{{ JSON.stringify(p, null, 2) }}</pre></v-card-text></v-card>\n</template>\n<script>export default{data(){return{p:{}};},watch:{msg(m){if(m&&m.payload)this.p=m.payload;}}};</script>",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sol-fn-maps",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "feed: mappings",
+    "func": "const idx = global.get('aboxIndex') || {};\nconst sm = idx.sourceMap || {};\nconst rows = Object.keys(sm).map(k => ({ key: k, capability: (sm[k].capability||'').replace('dhc:capability/',''),\n    brick: ((idx.capability||{})[sm[k].capability]||{}).brickClass, coerce: sm[k].coerce || '' }));\nmsg.payload = rows; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-tmpl-maps"
+      ]
+    ]
+  },
+  {
+    "id": "sol-tmpl-maps",
+    "type": "ui-template",
+    "group": "sol-grp-cfg-maps",
+    "page": "",
+    "ui": "",
+    "name": "Mappings card",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "head": "",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "format": "<template>\n  <v-card flat><v-card-title>Field mappings</v-card-title><v-card-text>\n    <v-table density=\"compact\"><thead><tr><th>source/field</th><th>capability</th><th>Brick class</th><th>coerce</th></tr></thead>\n    <tbody><tr v-for=\"(r,i) in rows\" :key=\"i\"><td>{{r.key}}</td><td>{{r.capability}}</td><td>{{r.brick}}</td><td>{{r.coerce}}</td></tr></tbody></v-table>\n  </v-card-text></v-card>\n</template>\n<script>export default{data(){return{rows:[]};},watch:{msg(m){if(m&&Array.isArray(m.payload))this.rows=m.payload;}}};</script>",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sol-inject-refresh",
+    "type": "inject",
+    "z": "dp-tab",
+    "name": "dashboard refresh (3s)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "5",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-fn-native-solar",
+        "sol-fn-native-unmapped",
+        "sol-fn-mapped-obs",
+        "sol-fn-counts",
+        "sol-fn-config",
+        "sol-fn-maps"
+      ]
+    ]
+  },
+  {
     "id": "dp-abox-filter",
     "type": "subflow:sf-abox-filter",
     "z": "dp-tab",
@@ -3631,10 +4223,12 @@
     "y": 380,
     "wires": [
       [
-        "dp-buffer-cbox"
+        "dp-buffer-cbox",
+        "sol-fn-tap-mapped"
       ],
       [
-        "dp-buffer-unmapped"
+        "dp-buffer-unmapped",
+        "sol-fn-tap-unmapped"
       ]
     ]
   },
