@@ -3508,7 +3508,7 @@
     "type": "function",
     "z": "dp-tab",
     "name": "current solar state",
-    "func": "const s = global.get('solar_latest');\nif (!s) { msg.statusCode = 503; msg.payload = { error: 'no solar data yet' }; return msg; }\nmsg.statusCode = 200;\nmsg.payload = s;\nreturn msg;\n",
+    "func": "const s = global.get('solar_link_state') || {state:'unknown'};\nconst tok = global.get('solarman_token');\nconst stations = global.get('solarman_stations');\nconst latest = global.get('solar_latest');\nmsg.statusCode = 200;\nmsg.payload = {\n    link_state: s,\n    stations: stations || null,\n    token_present: !!(tok && tok.bearer),\n    token_expires: tok && tok.exp ? new Date(tok.exp).toISOString() : null,\n    latest: latest || 'no reading yet'\n};\nreturn msg;\n",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
