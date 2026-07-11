@@ -4089,7 +4089,8 @@
     "y": 0,
     "wires": [
       []
-    ]
+    ],
+    "z": "dp-tab"
   },
   {
     "id": "sol-fn-native-unmapped",
@@ -4131,7 +4132,8 @@
     "y": 0,
     "wires": [
       []
-    ]
+    ],
+    "z": "dp-tab"
   },
   {
     "id": "sol-fn-mapped-obs",
@@ -4173,7 +4175,8 @@
     "y": 0,
     "wires": [
       []
-    ]
+    ],
+    "z": "dp-tab"
   },
   {
     "id": "sol-fn-counts",
@@ -4215,7 +4218,8 @@
     "y": 0,
     "wires": [
       []
-    ]
+    ],
+    "z": "dp-tab"
   },
   {
     "id": "sol-fn-config",
@@ -4262,7 +4266,8 @@
     "y": 0,
     "wires": [
       []
-    ]
+    ],
+    "z": "dp-tab"
   },
   {
     "id": "sol-fn-maps",
@@ -4304,7 +4309,8 @@
     "y": 0,
     "wires": [
       []
-    ]
+    ],
+    "z": "dp-tab"
   },
   {
     "id": "sol-inject-refresh",
