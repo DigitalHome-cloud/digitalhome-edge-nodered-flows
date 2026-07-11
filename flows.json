@@ -3595,10 +3595,236 @@
     "name": "Solar — Connect",
     "page": "dhc-ui-page-pairing",
     "width": "6",
-    "height": "13",
+    "height": "9",
     "order": 3,
     "showTitle": true,
     "className": ""
+  },
+  {
+    "id": "sol-in-email",
+    "type": "ui-text-input",
+    "z": "dp-tab",
+    "group": "sol-grp-connect",
+    "name": "Email",
+    "label": "Email",
+    "tooltip": "",
+    "order": 1,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "mode": "email",
+    "delay": "400",
+    "topic": "email",
+    "topicType": "str",
+    "sendOnBlur": true,
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "clearable": false,
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-fn-collect"
+      ]
+    ]
+  },
+  {
+    "id": "sol-in-pass",
+    "type": "ui-text-input",
+    "z": "dp-tab",
+    "group": "sol-grp-connect",
+    "name": "Password",
+    "label": "Password",
+    "tooltip": "",
+    "order": 2,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "mode": "password",
+    "delay": "400",
+    "topic": "password",
+    "topicType": "str",
+    "sendOnBlur": true,
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "clearable": false,
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-fn-collect"
+      ]
+    ]
+  },
+  {
+    "id": "sol-sw-show",
+    "type": "ui-switch",
+    "z": "dp-tab",
+    "group": "sol-grp-connect",
+    "name": "Show password",
+    "label": "Show password",
+    "order": 3,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "decouple": false,
+    "topic": "show",
+    "topicType": "str",
+    "style": "",
+    "className": "",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "mdi-eye",
+    "oncolor": "#38bdf8",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "mdi-eye-off",
+    "offcolor": "#64748b",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-fn-collect"
+      ]
+    ]
+  },
+  {
+    "id": "sol-txt-reveal",
+    "type": "ui-text",
+    "z": "dp-tab",
+    "group": "sol-grp-connect",
+    "name": "Password preview",
+    "label": "Password preview",
+    "order": 4,
+    "width": "6",
+    "height": "1",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": false,
+    "font": "",
+    "fontSize": 14,
+    "color": "",
+    "className": "",
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "sol-btn-connect",
+    "type": "ui-button",
+    "z": "dp-tab",
+    "group": "sol-grp-connect",
+    "name": "Connect",
+    "label": "Connect",
+    "order": 5,
+    "width": "3",
+    "height": "1",
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#2563eb",
+    "className": "",
+    "icon": "",
+    "payload": "connect",
+    "payloadType": "str",
+    "topic": "connect",
+    "topicType": "str",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-fn-build"
+      ]
+    ]
+  },
+  {
+    "id": "sol-btn-disc",
+    "type": "ui-button",
+    "z": "dp-tab",
+    "group": "sol-grp-connect",
+    "name": "Disconnect",
+    "label": "Disconnect",
+    "order": 6,
+    "width": "3",
+    "height": "1",
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#64748b",
+    "className": "",
+    "icon": "",
+    "payload": "disconnect",
+    "payloadType": "str",
+    "topic": "disconnect",
+    "topicType": "str",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-fn-build"
+      ]
+    ]
+  },
+  {
+    "id": "sol-txt-status",
+    "type": "ui-text",
+    "z": "dp-tab",
+    "group": "sol-grp-connect",
+    "name": "Status",
+    "label": "Status",
+    "order": 7,
+    "width": "6",
+    "height": "1",
+    "format": "{{msg.payload.summary}}",
+    "layout": "col-center",
+    "style": false,
+    "font": "",
+    "fontSize": 14,
+    "color": "",
+    "className": "",
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "sol-fn-collect",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "collect field",
+    "func": "if (msg.topic==='email') flow.set('sol_email', String(msg.payload||'').trim());\nelse if (msg.topic==='password') flow.set('sol_pass', String(msg.payload||''));\nelse if (msg.topic==='show') flow.set('sol_show', !!msg.payload);\nconst show=flow.get('sol_show'); const pw=flow.get('sol_pass')||'';\nreturn { payload: (show && pw) ? ('shown: '+pw) : '' };\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-txt-reveal"
+      ]
+    ]
+  },
+  {
+    "id": "sol-fn-build",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "button → connect cmd",
+    "func": "if (msg.topic==='disconnect' || msg.payload==='disconnect') { msg.payload={action:'disconnect'}; }\nelse { msg.payload={action:'connect', email:flow.get('sol_email')||'', password:flow.get('sol_pass')||''}; }\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sm-fn-connect"
+      ]
+    ]
   },
   {
     "id": "sol-grp-status",
@@ -3610,56 +3836,6 @@
     "order": 4,
     "showTitle": true,
     "className": ""
-  },
-  {
-    "id": "sol-tmpl-login",
-    "type": "ui-template",
-    "z": "dp-tab",
-    "group": "sol-grp-connect",
-    "page": "",
-    "ui": "",
-    "name": "sol-tmpl-login",
-    "order": 1,
-    "width": "6",
-    "height": "13",
-    "head": "",
-    "storeOutMessages": true,
-    "passthru": false,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "className": "",
-    "format": "<template>\n  <v-card flat>\n    <v-card-title>Connect Solarman</v-card-title>\n    <v-card-text v-if=\"p.state==='linked'\">\n      <v-alert type=\"success\" variant=\"tonal\" density=\"compact\">Connected as {{p.email}}</v-alert>\n      <div class=\"mt-2\" style=\"font-size:13px;opacity:.75\">{{p.summary}}</div>\n      <v-btn class=\"mt-3\" color=\"error\" variant=\"tonal\" @click=\"disconnect\">Disconnect</v-btn>\n    </v-card-text>\n    <v-card-text v-else>\n      <p class=\"mb-4\" style=\"font-size:13px\">Sign in with your Solarman Smart account. The password is exchanged for a token and never stored.</p>\n      <v-text-field v-model=\"email\" label=\"Email\" variant=\"outlined\" hide-details=\"auto\" class=\"mb-4\" prepend-inner-icon=\"mdi-email-outline\"/>\n      <v-text-field v-model=\"password\" :type=\"show?'text':'password'\" label=\"Password\" variant=\"outlined\" hide-details=\"auto\" class=\"mb-4\"\n        prepend-inner-icon=\"mdi-lock-outline\" :append-inner-icon=\"show?'mdi-eye-off':'mdi-eye'\" @click:append-inner=\"show=!show\"/>\n      <v-btn color=\"primary\" block :loading=\"p.state==='connecting'\" @click=\"connect\">Connect</v-btn>\n      <div class=\"mt-3\" style=\"font-size:13px;opacity:.75\">{{p.summary}}</div>\n    </v-card-text>\n  </v-card>\n</template>\n<script>\nexport default {\n  data(){ return { email:'', password:'', show:false, p:{state:'unlinked',summary:''} }; },\n  watch:{ msg(m){ if(m && m.payload) this.p = m.payload; } },\n  methods:{\n    connect(){ this.send({ payload:{ action:'connect', email:this.email, password:this.password } }); },\n    disconnect(){ this.send({ payload:{ action:'disconnect' } }); this.email=''; this.password=''; this.show=false; }\n  }\n};\n</script>",
-    "x": 0,
-    "y": 0,
-    "wires": [
-      [
-        "sm-fn-connect"
-      ]
-    ]
-  },
-  {
-    "id": "sol-tmpl-status2",
-    "type": "ui-template",
-    "z": "dp-tab",
-    "group": "sol-grp-status",
-    "page": "",
-    "ui": "",
-    "name": "sol-tmpl-status2",
-    "order": 1,
-    "width": "6",
-    "height": "8",
-    "head": "",
-    "storeOutMessages": true,
-    "passthru": false,
-    "resendOnRefresh": true,
-    "templateScope": "local",
-    "className": "",
-    "format": "<template>\n  <v-card flat><v-card-title>Solar status</v-card-title><v-card-text>\n    <v-list density=\"compact\">\n      <v-list-item><v-list-item-title>State</v-list-item-title><v-list-item-subtitle>{{p.state}}</v-list-item-subtitle></v-list-item>\n      <v-list-item v-if=\"p.email\"><v-list-item-title>Account</v-list-item-title><v-list-item-subtitle>{{p.email}}</v-list-item-subtitle></v-list-item>\n      <v-list-item><v-list-item-title>Stations</v-list-item-title><v-list-item-subtitle>{{p.stations}}</v-list-item-subtitle></v-list-item>\n      <v-list-item v-if=\"p.last_poll\"><v-list-item-title>Last poll</v-list-item-title><v-list-item-subtitle>{{p.last_poll}}</v-list-item-subtitle></v-list-item>\n      <v-list-item v-if=\"p.token_expires\"><v-list-item-title>Token valid until</v-list-item-title><v-list-item-subtitle>{{p.token_expires}}</v-list-item-subtitle></v-list-item>\n    </v-list></v-card-text></v-card>\n</template>\n<script>export default{data(){return{p:{state:'unlinked'}};},watch:{msg(m){if(m&&m.payload)this.p=m.payload;}}};</script>",
-    "x": 0,
-    "y": 0,
-    "wires": [
-      []
-    ]
   },
   {
     "id": "sol-notify",
@@ -3916,8 +4092,7 @@
     "y": 0,
     "wires": [
       [
-        "sol-tmpl-login",
-        "sol-tmpl-status2"
+        "sol-txt-status"
       ]
     ]
   },
