@@ -5712,5 +5712,88 @@
     "x": 0,
     "y": 0,
     "wires": []
+  },
+  {
+    "id": "app-lan-in",
+    "type": "http in",
+    "z": "dp-tab",
+    "name": "POST /app-api/lan-scan",
+    "url": "/app-api/lan-scan",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-fn-lan"
+      ]
+    ]
+  },
+  {
+    "id": "app-lan-in2",
+    "type": "http in",
+    "z": "dp-tab",
+    "name": "GET /app-api/lan-scan",
+    "url": "/app-api/lan-scan",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-fn-lan"
+      ]
+    ]
+  },
+  {
+    "id": "app-fn-lan",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "LAN crawl",
+    "func": "return (async()=>{\n  const body=(msg.payload&&typeof msg.payload==='object')?msg.payload:{};\n  // subnet\n  let base=(body.subnet||'').trim();\n  if(!base){ const ifs=os.networkInterfaces();\n    for(const nm of Object.keys(ifs)){ if(/^(lo|docker|veth|br-|virbr|tun|tap)/i.test(nm)) continue;\n      for(const a of ifs[nm]){ if(a.family==='IPv4'&&!a.internal&&/^(192\\.168|10\\.|172\\.(1[6-9]|2\\d|3[01]))\\./.test(a.address)){ base=a.address.split('.').slice(0,3).join('.'); break; } } if(base)break; } }\n  if(!base){ msg.statusCode=400; msg.payload={error:'no subnet'}; return msg; }\n  const tcp=(ip,port,tmo)=>new Promise((res)=>{ const s=net.connect({host:ip,port,timeout:tmo||700});\n    s.on('connect',()=>{ s.destroy(); res(true); }); s.on('timeout',()=>{ s.destroy(); res(false); }); s.on('error',()=>res(false)); });\n  // 1) sweep :80 across the /24 to populate ARP (SYN sent even if refused)\n  const ips=[]; for(let i=1;i<=254;i++) ips.push(base+'.'+i);\n  await Promise.allSettled(ips.map(ip=>tcp(ip,80,600)));\n  await new Promise(r=>setTimeout(r,300));\n  // 2) read ARP → live hosts + MAC\n  const arp={}; try{ const t=fs.readFileSync('/proc/net/arp','utf8');\n    t.split('\\n').slice(1).forEach(l=>{ const c=l.trim().split(/\\s+/); if(c[0]&&c[3]&&c[3]!=='00:00:00:00:00:00' && c[0].indexOf('.')>=0) arp[c[0]]=c[3].toLowerCase(); }); }catch(e){}\n  // 3) OUI vendor map (curated)\n  const OUI={ 'b8:27:eb':'Raspberry Pi','dc:a6:32':'Raspberry Pi','e4:5f:01':'Raspberry Pi','28:cd:c1':'Raspberry Pi',\n    'ec:b5:fa':'Philips / Signify','00:17:88':'Philips / Signify','00:0b:3b':'devolo','30:d3:2d':'devolo','b0:c5:54':'devolo','5c:ac:4c':'devolo',\n    '00:1a:22':'eQ-3 (Homematic)','7c:db:98':'AVM (FRITZ!Box)','c8:0e:14':'AVM','3c:a6:2f':'AVM',\n    'fc:ec:da':'Ubiquiti','24:5a:4c':'Ubiquiti','5c:cf:7f':'Espressif (ESP)','a4:cf:12':'Espressif','40:22:d8':'Espressif',\n    'b8:e9:37':'Sonos','5c:aa:fd':'Sonos','18:b4:30':'Google/Nest','1c:e8:9e':'Intel','48:26:4c':'Intel',\n    'ac:de:48':'Apple','f0:18:98':'Apple','68:3a:48':'Netgear' };\n  const vendor=(mac)=>{ if(!mac) return null; const p=mac.slice(0,8);\n    const local=(parseInt(mac.slice(0,2),16)&2)===2; if(OUI[p]) return OUI[p]; return local?'(randomized MAC)':null; };\n  // known integrations\n  const ccuIp=global.get('ccu_ip'), hueIp=global.get('hue_ip');\n  const gw=base+'.1';\n  // 4) enrich each live host\n  const hosts=Object.keys(arp).filter(ip=>ip.startsWith(base+'.'));\n  const enrich=async(ip)=>{ const mac=arp[ip]; const ven=vendor(mac);\n    let host=null; try{ host=(await dns.promises.reverse(ip))[0]; }catch(e){}\n    const ports=[]; for(const p of [80,443,8080,8443,1880,1900]){ if(await tcp(ip,p,500)) ports.push(p); }\n    let role='device', type=ven||'unknown';\n    if(ip===gw) { role='gateway'; type=ven||'router'; }\n    if(ip===ccuIp){ role='integration'; type='Homematic CCU'; }\n    if(ip===hueIp){ role='integration'; type='Philips Hue bridge'; }\n    if(ven==='devolo'){ role='network'; type='devolo (powerline)'; }\n    return { ip, mac, vendor:ven, hostname:host, ports, role, type };\n  };\n  let devices=await Promise.all(hosts.map(enrich));\n  devices.sort((a,b)=> a.ip.split('.').map(Number)[3]-b.ip.split('.').map(Number)[3]);\n  const result={ subnet: base+'.0/24', gateway: gw, count: devices.length, scanned_at: new Date().toISOString(), devices };\n  global.set('lan_scan', result);\n  msg.statusCode=200; msg.payload=result; return msg;\n})();",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "net",
+        "module": "net"
+      },
+      {
+        "var": "fs",
+        "module": "fs"
+      },
+      {
+        "var": "dns",
+        "module": "dns"
+      },
+      {
+        "var": "os",
+        "module": "os"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-lan-out"
+      ]
+    ]
+  },
+  {
+    "id": "app-lan-out",
+    "type": "http response",
+    "z": "dp-tab",
+    "name": "",
+    "statusCode": "",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 0,
+    "y": 0,
+    "wires": []
   }
 ]
