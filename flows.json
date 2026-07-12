@@ -2758,7 +2758,7 @@
     "type": "function",
     "z": "sf-buffer-writer",
     "name": "format + route",
-    "func": "const allowed = new Set(['cbox', 'unmapped']);\nconst channel = allowed.has(msg.topic) ? msg.topic : 'misc';\nconst d = new Date();\nconst yyyy = d.getUTCFullYear();\nconst mm = String(d.getUTCMonth() + 1).padStart(2, '0');\nconst dd = String(d.getUTCDate()).padStart(2, '0');\nmsg.filename = `/timeseries/${channel}/${yyyy}-${mm}-${dd}.jsonl`;\nmsg.payload = JSON.stringify(msg.payload);\nreturn msg;\n",
+    "func": "const allowed = new Set(['cbox', 'unmapped']);\nconst isRaw = /^raw\\/[a-z0-9][a-z0-9/_-]*$/i.test(msg.topic || '');\nconst channel = (allowed.has(msg.topic) || isRaw) ? msg.topic : 'misc';\nconst d = new Date();\nconst yyyy = d.getUTCFullYear();\nconst mm = String(d.getUTCMonth() + 1).padStart(2, '0');\nconst dd = String(d.getUTCDate()).padStart(2, '0');\nmsg.filename = `/timeseries/${channel}/${yyyy}-${mm}-${dd}.jsonl`;\nmsg.payload = JSON.stringify(msg.payload);\nreturn msg;\n",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
@@ -3276,12 +3276,17 @@
     "type": "function",
     "z": "dp-tab",
     "name": "current solar state",
-    "func": "const s = global.get('solar_link_state') || {state:'unknown'};\nconst latest = global.get('solar_latest');\nmsg.statusCode = (s.state==='linked') ? 200 : 503;\nmsg.payload = latest && latest.station_id ? latest : { state: s.state, note: 'linked but no reading yet' };\nreturn msg;\n",
+    "func": "const rm=global.get('recent_mapped')||[]; const ru=global.get('recent_unmapped')||[];\nlet write='?'; try{ fs.writeFileSync('/timeseries/_probe.txt', new Date().toISOString()); write='ok'; }catch(e){ write='FAIL: '+e.message; }\nmsg.statusCode=200;\nmsg.payload={ solar: global.get('solar_latest')? 'reading ok':'none', recent_mapped: rm.length, recent_unmapped: ru.length,\n  sample_mapped: rm[0]||null, sample_unmapped: ru[0]||null,\n  ccu_link: global.get('ccu_link'), hue_link: global.get('hue_link'), timeseries_write: write };\nreturn msg;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
-    "libs": [],
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
     "x": 560,
     "y": 960,
     "wires": [
@@ -4928,7 +4933,7 @@
     "type": "function",
     "z": "dp-tab",
     "name": "connect Hue",
-    "func": "return (async()=>{\n  const ip=(flow.get('hue_ip_pending')||global.get('hue_ip')||'').trim();\n  if(!ip) return {payload:'⚠ Enter the Hue bridge IP first'};\n  const post=(url,body,tmo)=>new Promise((resolve)=>{ try{ const u=new URL(url); const data=JSON.stringify(body);\n    const req=http.request({hostname:u.hostname,port:u.port||80,path:u.pathname,method:'POST',timeout:tmo||5000,\n      headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data)}},(res)=>{\n      let b=''; res.on('data',c=>b+=c); res.on('end',()=>resolve({status:res.statusCode,body:b})); });\n    req.on('timeout',()=>{req.destroy();resolve(null);}); req.on('error',()=>resolve(null)); req.write(data); req.end(); }catch(e){resolve(null);} });  const get=(url,tmo)=>new Promise((resolve)=>{ try{ const req=http.get(url,{timeout:tmo||1200},(res)=>{\n      let b=''; res.on('data',c=>b+=c); res.on('end',()=>resolve({status:res.statusCode,body:b})); });\n    req.on('timeout',()=>{req.destroy();resolve(null);}); req.on('error',()=>resolve(null)); }catch(e){resolve(null);} });\n  const r=await post('http://'+ip+'/api',{devicetype:'digitalhome-edge#nodered'},5000);\n  if(!r) return {payload:'✗ No Hue bridge reachable at '+ip};\n  let j; try{ j=JSON.parse(r.body); }catch(e){ return {payload:'✗ Hue: bad response'}; }\n  const row=Array.isArray(j)?j[0]:{};\n  if(row && row.success && row.success.username){\n    const key=row.success.username; let bridgeid=null;\n    const c=await get('http://'+ip+'/api/config',3000); if(c&&c.status===200){ try{ bridgeid=JSON.parse(c.body).bridgeid; }catch(e){} }\n    fs.writeFileSync('/secrets/hue.json',JSON.stringify({ip,api_key:key,bridgeid}),{mode:0o600});\n    global.set('hue_ip',ip); global.set('hue_api_key',key); global.set('hue_link',{state:'linked',ip,bridgeid});\n    node.status({fill:'green',shape:'dot',text:'Hue paired '+ip});\n    node.send([ {payload:'✓ Hue paired ('+ip+')'}, {payload:{}} ]); return null;\n  }\n  if(row && row.error && row.error.type===101) return {payload:'Press the round button on the bridge, then Connect'};\n  return {payload:'✗ Hue pairing failed: '+JSON.stringify(row).slice(0,120)};\n})();",
+    "func": "return (async()=>{\n  const ip=(flow.get('hue_ip_pending')||global.get('hue_ip')||'').trim();\n  if(!ip){ node.send([{payload:'⚠ Enter the Hue bridge IP first'},null]); return null; }\n  const reqJson=(method,path,body,tmo)=>new Promise((resolve)=>{ try{\n    const data=body?JSON.stringify(body):null;\n    const opts={hostname:ip,port:80,path:path,method:method,timeout:tmo||5000,headers:{}};\n    if(data){ opts.headers['Content-Type']='application/json'; opts.headers['Content-Length']=Buffer.byteLength(data); }\n    const req=http.request(opts,(res)=>{ let b=''; res.on('data',c=>b+=c); res.on('end',()=>resolve({status:res.statusCode,body:b})); });\n    req.on('timeout',()=>{req.destroy();resolve(null);}); req.on('error',()=>resolve(null));\n    if(data) req.write(data); req.end();\n  }catch(e){ resolve(null); } });\n  node.status({fill:'blue',shape:'dot',text:'pairing '+ip+' — press the button'});\n  node.send([ {payload:'Pairing… press the round button on the Hue bridge now (60s)'}, null ]);\n  const deadline=Date.now()+60000; let unreachable=0;\n  while(Date.now()<deadline){\n    const r=await reqJson('POST','/api',{devicetype:'digitalhome-edge#nodered'},5000);\n    if(!r){ if(++unreachable>=3){ node.status({fill:'red',shape:'ring',text:'unreachable'}); node.send([{payload:'✗ No Hue bridge reachable at '+ip},null]); return null; } }\n    else { unreachable=0; let j; try{ j=JSON.parse(r.body); }catch(e){ j=null; }\n      const row=Array.isArray(j)?j[0]:{};\n      if(row && row.success && row.success.username){\n        const key=row.success.username; let bridgeid=null;\n        const c=await reqJson('GET','/api/config',null,3000); if(c&&c.status===200){ try{ bridgeid=JSON.parse(c.body).bridgeid; }catch(e){} }\n        fs.writeFileSync('/secrets/hue.json',JSON.stringify({ip,api_key:key,bridgeid}),{mode:0o600});\n        global.set('hue_ip',ip); global.set('hue_api_key',key); global.set('hue_link',{state:'linked',ip,bridgeid});\n        node.status({fill:'green',shape:'dot',text:'Hue paired '+ip});\n        node.send([ {payload:'✓ Hue paired ('+ip+')'}, {payload:{}} ]); return null;\n      }\n      // type 101 = link button not pressed yet → keep polling\n    }\n    await new Promise(res=>setTimeout(res,2000));\n  }\n  node.status({fill:'yellow',shape:'ring',text:'pairing timed out'});\n  node.send([ {payload:'✗ Pairing timed out — click Connect and press the bridge button within 60s'}, null ]);\n  return null;\n})();",
     "outputs": 2,
     "noerr": 0,
     "initialize": "",
