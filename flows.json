@@ -4636,7 +4636,7 @@
     "group": "ccu-grp",
     "name": "Status",
     "label": "Status",
-    "order": 7,
+    "order": 9,
     "width": "6",
     "height": "1",
     "format": "{{msg.payload}}",
@@ -4863,7 +4863,7 @@
     "group": "hue-grp",
     "name": "Status",
     "label": "Status",
-    "order": 6,
+    "order": 9,
     "width": "6",
     "height": "1",
     "format": "{{msg.payload}}",
@@ -5391,5 +5391,113 @@
     "x": 0,
     "y": 0,
     "wires": []
+  },
+  {
+    "id": "ccu-btn-disc",
+    "type": "ui-button",
+    "z": "dp-tab",
+    "group": "ccu-grp",
+    "name": "Disconnect CCU",
+    "label": "Disconnect CCU",
+    "order": 8,
+    "width": "6",
+    "height": "1",
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#64748b",
+    "className": "",
+    "icon": "",
+    "payload": "disc",
+    "payloadType": "str",
+    "topic": "disc",
+    "topicType": "str",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-fn-disc"
+      ]
+    ]
+  },
+  {
+    "id": "ccu-fn-disc",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "disconnect CCU (logout)",
+    "func": "return (async()=>{\n  const ip=global.get('ccu_ip'); const sid=global.get('ccu_sid');\n  if(ip && sid){ try{\n    const data=JSON.stringify({method:'Session.logout',params:{'_session_id_':sid},id:1});\n    await new Promise((res)=>{ const req=http.request({hostname:ip,port:80,path:'/api/homematic.cgi',method:'POST',timeout:4000,headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data)}},(r)=>{ r.on('data',()=>{}); r.on('end',res); }); req.on('timeout',()=>{req.destroy();res();}); req.on('error',res); req.write(data); req.end(); });\n  }catch(e){} }\n  try{ fs.unlinkSync('/secrets/ccu.json'); }catch(e){}\n  global.set('ccu_ip',null); global.set('ccu_user',null); global.set('ccu_pass',null); global.set('ccu_sid',null);\n  global.set('ccu_link',{state:'unlinked'});\n  node.status({fill:'grey',shape:'ring',text:'disconnected'});\n  return {payload:'CCU disconnected'+(sid?' (session freed)':'')};\n})();",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      },
+      {
+        "var": "http",
+        "module": "http"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-notify"
+      ]
+    ]
+  },
+  {
+    "id": "hue-btn-disc",
+    "type": "ui-button",
+    "z": "dp-tab",
+    "group": "hue-grp",
+    "name": "Disconnect Hue",
+    "label": "Disconnect Hue",
+    "order": 7,
+    "width": "6",
+    "height": "1",
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#64748b",
+    "className": "",
+    "icon": "",
+    "payload": "disc",
+    "payloadType": "str",
+    "topic": "disc",
+    "topicType": "str",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "hue-fn-disc"
+      ]
+    ]
+  },
+  {
+    "id": "hue-fn-disc",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "disconnect Hue",
+    "func": "try{ fs.unlinkSync('/secrets/hue.json'); }catch(e){}\nglobal.set('hue_ip',null); global.set('hue_api_key',null); global.set('hue_link',{state:'unlinked'});\nnode.status({fill:'grey',shape:'ring',text:'disconnected'});\nreturn {payload:'Hue disconnected'};",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "sol-notify"
+      ]
+    ]
   }
 ]
