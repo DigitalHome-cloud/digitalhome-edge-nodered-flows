@@ -3276,17 +3276,12 @@
     "type": "function",
     "z": "dp-tab",
     "name": "current solar state",
-    "func": "const rm=global.get('recent_mapped')||[]; const ru=global.get('recent_unmapped')||[];\nlet write='?'; try{ fs.writeFileSync('/timeseries/_probe.txt', new Date().toISOString()); write='ok'; }catch(e){ write='FAIL: '+e.message; }\nmsg.statusCode=200;\nmsg.payload={ solar: global.get('solar_latest')? 'reading ok':'none', recent_mapped: rm.length, recent_unmapped: ru.length,\n  sample_mapped: rm[0]||null, sample_unmapped: ru[0]||null,\n  ccu_link: global.get('ccu_link'), hue_link: global.get('hue_link'), timeseries_write: write };\nreturn msg;",
+    "func": "const s = global.get('solar_link_state') || {state:'unknown'};\nconst latest = global.get('solar_latest');\nmsg.statusCode = (s.state==='linked') ? 200 : 503;\nmsg.payload = latest && latest.station_id ? latest : { state: s.state, note: 'linked but no reading yet' };\nreturn msg;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
     "finalize": "",
-    "libs": [
-      {
-        "var": "fs",
-        "module": "fs"
-      }
-    ],
+    "libs": [],
     "x": 560,
     "y": 960,
     "wires": [
@@ -4302,7 +4297,9 @@
         "sol-fn-mapped-obs",
         "sol-fn-counts",
         "sol-fn-config",
-        "sol-fn-maps"
+        "sol-fn-maps",
+        "ccu-fn-native",
+        "hue-fn-native"
       ]
     ]
   },
@@ -5053,7 +5050,7 @@
     "type": "function",
     "z": "dp-tab",
     "name": "CCU statelist → observations",
-    "func": "function coerce(v,vt){ if(v==null) return v; if(vt==='2'||vt===2) return (v==='true'||v===true);\n  const n=Number(v); return isNaN(n)?v:n; }\nif(msg.payload && msg.payload.not_authenticated!==undefined){ global.set('ccu_sid',null); node.status({fill:'yellow',shape:'ring',text:'re-auth next poll'}); return null; }\nconst root = msg.payload && (msg.payload.stateList||msg.payload.statelist||msg.payload.state);\nconst devices = root && root.device ? [].concat(root.device) : [];\nconst ts=Date.now(); const out=[]; let dp=0;\nfor(const dev of devices){ const da=dev.$||{}; const addr=da.name||da.ise_id||'unknown';\n  const chans = dev.channel ? [].concat(dev.channel) : [];\n  for(const ch of chans){ const ca=ch.$||{}; const idx=ca.index!=null?ca.index:'0';\n    const dps = ch.datapoint ? [].concat(ch.datapoint) : [];\n    const obs=[];\n    for(const d0 of dps){ const p=d0.$||d0; if(p.name==null) continue; obs.push({field:p.name, value:coerce(p.value,p.valuetype)}); dp++; }\n    if(obs.length) out.push({payload:{source:'ccu', device_id:addr+':'+idx, ts, observations:obs}});\n  }\n}\nglobal.set('ccu_latest',{ts:new Date(ts).toISOString(), devices:devices.length, datapoints:dp});\nnode.status({fill:'green',shape:'dot',text:devices.length+' dev / '+dp+' dp'});\nconst raw={payload:{ts:new Date(ts).toISOString(),source:'ccu',endpoint:'/addons/xmlapi/statelist.cgi',devices:devices.length,response:root||{}}, topic:'raw/ccu'};\nreturn [out, raw];",
+    "func": "function coerce(v,vt){ if(v==null) return v; if(vt==='2'||vt===2) return (v==='true'||v===true);\n  const n=Number(v); return isNaN(n)?v:n; }\nif(msg.payload && msg.payload.not_authenticated!==undefined){ global.set('ccu_sid',null); node.status({fill:'yellow',shape:'ring',text:'re-auth next poll'}); return null; }\nconst root = msg.payload && (msg.payload.stateList||msg.payload.statelist||msg.payload.state);\nconst devices = root && root.device ? [].concat(root.device) : [];\nconst ts=Date.now(); const out=[]; let dp=0;\nfor(const dev of devices){ const da=dev.$||{}; const addr=da.name||da.ise_id||'unknown';\n  const chans = dev.channel ? [].concat(dev.channel) : [];\n  for(const ch of chans){ const ca=ch.$||{}; const idx=ca.index!=null?ca.index:'0';\n    const dps = ch.datapoint ? [].concat(ch.datapoint) : [];\n    const obs=[];\n    for(const d0 of dps){ const p=d0.$||d0; if(p.name==null) continue; obs.push({field:p.name, value:coerce(p.value,p.valuetype)}); dp++; }\n    if(obs.length) out.push({payload:{source:'ccu', device_id:addr+':'+idx, ts, observations:obs}});\n  }\n}\nconst sample=out.slice(0,6).map(m=>{const p=m.payload;return p.device_id+' → '+p.observations.slice(0,4).map(o=>o.field+'='+o.value).join(', ');}).join('\\n');\nglobal.set('ccu_latest',{ts:new Date(ts).toISOString(), devices:devices.length, datapoints:dp,\n  summary:(devices.length?devices.length+' devices, '+dp+' datapoints @ '+new Date(ts).toISOString().slice(11,19)+'Z\\n'+sample:'authenticated? no data — check CCU credentials')});\nnode.status({fill:'green',shape:'dot',text:devices.length+' dev / '+dp+' dp'});\nconst raw={payload:{ts:new Date(ts).toISOString(),source:'ccu',endpoint:'/addons/xmlapi/statelist.cgi',devices:devices.length,response:root||{}}, topic:'raw/ccu'};\nreturn [out, raw];",
     "outputs": 2,
     "noerr": 0,
     "initialize": "",
@@ -5152,7 +5149,7 @@
     "type": "function",
     "z": "dp-tab",
     "name": "Hue sensors/lights → observations",
-    "func": "const topic=msg.topic; const data=msg.payload||{}; const ts=Date.now(); const out=[];\nif(topic==='sensors'){\n  for(const [id,s] of Object.entries(data)){ if(!s||typeof s!=='object'||!s.state) continue;\n    const st=s.state; const obs=Object.keys(st).filter(k=>!/^last(updated|announced)$/.test(k)&&st[k]!=null).map(k=>({field:k,value:st[k]}));\n    if(s.config && s.config.battery!=null) obs.push({field:'battery',value:s.config.battery});\n    const dev=s.uniqueid||('sensor-'+id);\n    if(obs.length) out.push({payload:{source:'hue',device_id:String(dev),ts,observations:obs}});\n  }\n}else if(topic==='lights'){\n  for(const [id,l] of Object.entries(data)){ if(!l||typeof l!=='object'||!l.state) continue;\n    const st=l.state; const obs=Object.keys(st).filter(k=>st[k]!=null&&['on','bri','ct','reachable'].includes(k)).map(k=>({field:k,value:st[k]}));\n    const dev=l.uniqueid||('light-'+id);\n    if(obs.length) out.push({payload:{source:'hue',device_id:String(dev),ts,observations:obs}});\n  }\n}\nconst cur=global.get('hue_latest')||{}; cur.ts=new Date(ts).toISOString(); cur[topic]=Object.keys(data).length; global.set('hue_latest',cur);\nnode.status({fill:'green',shape:'dot',text:topic+': '+Object.keys(data).length});\nconst raw={payload:{ts:new Date(ts).toISOString(),source:'hue',endpoint:'/api/*/'+topic,response:data}, topic:'raw/hue'};\nreturn [out, raw];",
+    "func": "const topic=msg.topic; const data=msg.payload||{}; const ts=Date.now(); const out=[];\nif(topic==='sensors'){\n  for(const [id,s] of Object.entries(data)){ if(!s||typeof s!=='object'||!s.state) continue;\n    const st=s.state; const obs=Object.keys(st).filter(k=>!/^last(updated|announced)$/.test(k)&&st[k]!=null).map(k=>({field:k,value:st[k]}));\n    if(s.config && s.config.battery!=null) obs.push({field:'battery',value:s.config.battery});\n    const dev=s.uniqueid||('sensor-'+id);\n    if(obs.length) out.push({payload:{source:'hue',device_id:String(dev),ts,observations:obs}});\n  }\n}else if(topic==='lights'){\n  for(const [id,l] of Object.entries(data)){ if(!l||typeof l!=='object'||!l.state) continue;\n    const st=l.state; const obs=Object.keys(st).filter(k=>st[k]!=null&&['on','bri','ct','reachable'].includes(k)).map(k=>({field:k,value:st[k]}));\n    const dev=l.uniqueid||('light-'+id);\n    if(obs.length) out.push({payload:{source:'hue',device_id:String(dev),ts,observations:obs}});\n  }\n}\nconst cur=global.get('hue_latest')||{}; cur.ts=new Date(ts).toISOString(); cur[topic]=Object.keys(data).length;\ncur['sample_'+topic]=out.slice(0,5).map(m=>{const p=m.payload;return p.device_id.slice(0,14)+' → '+p.observations.slice(0,4).map(o=>o.field+'='+o.value).join(', ');}).join('\\n');\ncur.summary=(('sensors: '+(cur.sensors||0)+', lights: '+(cur.lights||0)+' @ '+cur.ts.slice(11,19)+'Z')+'\\n'+((cur.sample_sensors||'')+'\\n'+(cur.sample_lights||'')).trim());\nglobal.set('hue_latest',cur);\nnode.status({fill:'green',shape:'dot',text:topic+': '+Object.keys(data).length});\nconst raw={payload:{ts:new Date(ts).toISOString(),source:'hue',endpoint:'/api/*/'+topic,response:data}, topic:'raw/hue'};\nreturn [out, raw];",
     "outputs": 2,
     "noerr": 0,
     "initialize": "",
@@ -5233,6 +5230,108 @@
     "wires": [
       [
         "hue-fn-collect"
+      ]
+    ]
+  },
+  {
+    "id": "sol-grp-native-ccu",
+    "type": "ui-group",
+    "name": "CCU — latest reading",
+    "page": "sol-page-native",
+    "width": "6",
+    "height": "1",
+    "order": 3,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "sol-grp-native-hue",
+    "type": "ui-group",
+    "name": "Hue — latest reading",
+    "page": "sol-page-native",
+    "width": "6",
+    "height": "1",
+    "order": 4,
+    "showTitle": true,
+    "className": ""
+  },
+  {
+    "id": "ccu-txt-native",
+    "type": "ui-text",
+    "z": "dp-tab",
+    "group": "sol-grp-native-ccu",
+    "name": "CCU",
+    "label": "CCU",
+    "order": 1,
+    "width": "6",
+    "height": "1",
+    "format": "{{msg.payload}}",
+    "layout": "col-left",
+    "style": false,
+    "font": "",
+    "fontSize": 13,
+    "color": "",
+    "className": "",
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "hue-txt-native",
+    "type": "ui-text",
+    "z": "dp-tab",
+    "group": "sol-grp-native-hue",
+    "name": "Hue",
+    "label": "Hue",
+    "order": 1,
+    "width": "6",
+    "height": "1",
+    "format": "{{msg.payload}}",
+    "layout": "col-left",
+    "style": false,
+    "font": "",
+    "fontSize": 13,
+    "color": "",
+    "className": "",
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "ccu-fn-native",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "feed: ccu latest",
+    "func": "msg.payload=(global.get('ccu_latest')||{}).summary||'no CCU reading yet'; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "ccu-txt-native"
+      ]
+    ]
+  },
+  {
+    "id": "hue-fn-native",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "feed: hue latest",
+    "func": "msg.payload=(global.get('hue_latest')||{}).summary||'no Hue reading yet'; return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "hue-txt-native"
       ]
     ]
   }
