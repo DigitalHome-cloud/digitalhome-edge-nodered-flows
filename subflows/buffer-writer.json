@@ -10,7 +10,9 @@
                 "x": 40,
                 "y": 80,
                 "wires": [
-                    { "id": "sf-buffer-writer-fmt" }
+                    {
+                        "id": "sf-buffer-writer-fmt"
+                    }
                 ]
             }
         ],
@@ -18,7 +20,9 @@
         "env": [],
         "meta": {},
         "color": "#DEB887",
-        "inputLabels": ["record"],
+        "inputLabels": [
+            "record"
+        ],
         "icon": "font-awesome/fa-database"
     },
     {
@@ -34,14 +38,18 @@
         "libs": [],
         "x": 220,
         "y": 80,
-        "wires": [["sf-buffer-writer-file"]]
+        "wires": [
+            [
+                "sf-buffer-writer-file"
+            ]
+        ]
     },
     {
         "id": "sf-buffer-writer-file",
         "type": "file",
         "z": "sf-buffer-writer",
         "name": "append line",
-        "filename": "",
+        "filename": "filename",
         "filenameType": "msg",
         "appendNewline": true,
         "createDir": true,
@@ -49,6 +57,8 @@
         "encoding": "none",
         "x": 400,
         "y": 80,
-        "wires": [[]]
+        "wires": [
+            []
+        ]
     }
 ]

@@ -2777,7 +2777,7 @@
     "type": "file",
     "z": "sf-buffer-writer",
     "name": "append line",
-    "filename": "",
+    "filename": "filename",
     "filenameType": "msg",
     "appendNewline": true,
     "createDir": true,
