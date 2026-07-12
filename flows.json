@@ -5357,7 +5357,7 @@
     "type": "function",
     "z": "dp-tab",
     "name": "edge status (headless API)",
-    "func": "const idx=global.get('aboxIndex')||{};\nconst rm=(global.get('recent_mapped')||[]).length;\nmsg.headers={'content-type':'application/json'};\nmsg.statusCode=200;\nmsg.payload={\n  solar:{ link: global.get('solar_link_state')||{state:'unlinked'}, latest: global.get('solar_latest')||null },\n  ccu:  { link: global.get('ccu_link')||{state:'unlinked'}, latest: global.get('ccu_latest')||null },\n  hue:  { link: global.get('hue_link')||{state:'unlinked'}, latest: global.get('hue_latest')||null },\n  pipeline:{ counts: idx.counts||null, sources: idx.sources||[], recent_mapped: rm },\n  ts: new Date().toISOString()\n};\nreturn msg;",
+    "func": "const idx=global.get('aboxIndex')||{};\nconst rm=(global.get('recent_mapped')||[]).length;\nmsg.headers={'content-type':'application/json'};\nmsg.statusCode=200;\nmsg.payload={\n  solar:{ link: global.get('solar_link_state')||{state:'unlinked'}, latest: global.get('solar_latest')||null },\n  ccu:  { link: global.get('ccu_link')||{state:'unlinked'}, latest: global.get('ccu_latest')||null },\n  hue:  { link: global.get('hue_link')||{state:'unlinked'}, latest: global.get('hue_latest')||null },\n  pipeline:{ counts: idx.counts||null, sources: idx.sources||[], recent_mapped: rm },\n  config: { ccu: global.get('ccu_config')||null, hue: global.get('hue_config')||null },\n  ts: new Date().toISOString()\n};\nreturn msg;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
@@ -5819,5 +5819,63 @@
     "wires": [
       []
     ]
+  },
+  {
+    "id": "app-cfg-in",
+    "type": "http in",
+    "z": "dp-tab",
+    "name": "POST /app-api/config-pull",
+    "url": "/app-api/config-pull",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-fn-cfg"
+      ]
+    ]
+  },
+  {
+    "id": "app-fn-cfg",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "config pull (ccu/hue)",
+    "func": "return (async()=>{\n  const body=msg.payload||{}; const source=body.source;\n  const get=(ip,path,tmo)=>new Promise((res)=>{ try{ const req=http.get('http://'+ip+path,{timeout:tmo||9000},(r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>res({status:r.statusCode,body:b})); }); req.on('timeout',()=>{req.destroy();res(null);}); req.on('error',()=>res(null)); }catch(e){ res(null); } });\n  const done=(ok,message,extra)=>{ msg.statusCode=ok?200:400; msg.payload=Object.assign({ok,message},extra||{}); return msg; };\n  try{ fs.mkdirSync('/cbox/discovered',{recursive:true}); }catch(e){}\n  if(source==='ccu'){\n    const ip=global.get('ccu_ip'); const token=global.get('ccu_token');\n    if(!ip) return done(false,'CCU not connected');\n    const sid=token?('?sid='+encodeURIComponent(token)):'';\n    const [rooms,funcs,devs]=await Promise.all([\n      get(ip,'/addons/xmlapi/roomlist.cgi'+sid), get(ip,'/addons/xmlapi/functionlist.cgi'+sid), get(ip,'/addons/xmlapi/devicelist.cgi'+sid) ]);\n    if(!devs) return done(false,'CCU unreachable');\n    if(/not_authenticated/.test(devs.body||'')) return done(false,'CCU not authenticated (token?)');\n    const roomArr=[...(rooms&&rooms.body||'').matchAll(/<room[^>]*name=['\"]([^'\"]+)['\"][^>]*>([\\s\\S]*?)<\\/room>/g)].map(m=>({name:m[1],channels:(m[2].match(/<channel/g)||[]).length}));\n    const funcArr=[...(funcs&&funcs.body||'').matchAll(/<function[^>]*name=['\"]([^'\"]+)['\"][^>]*>([\\s\\S]*?)<\\/function>/g)].map(m=>({name:m[1],channels:(m[2].match(/<channel/g)||[]).length}));\n    const devArr=[...(devs.body||'').matchAll(/<device[^>]*name=['\"]([^'\"]+)['\"][^>]*address=['\"]([^'\"]*)['\"][^>]*device_type=['\"]([^'\"]*)['\"]/g)].map(m=>({name:m[1],address:m[2],type:m[3]}));\n    const cfg={source:'ccu',ip,fetched_at:new Date().toISOString(),rooms:roomArr,functions:funcArr,devices:devArr,raw:{roomlist:rooms&&rooms.body,functionlist:funcs&&funcs.body,devicelist:devs.body}};\n    try{ fs.writeFileSync('/cbox/discovered/ccu.json',JSON.stringify(cfg,null,1)); }catch(e){ return done(false,'write failed: '+e.message); }\n    const sum={rooms:roomArr.length,functions:funcArr.length,devices:devArr.length,fetched_at:cfg.fetched_at,room_names:roomArr.map(r=>r.name).slice(0,20)};\n    global.set('ccu_config',sum);\n    return done(true,'CCU config updated',sum);\n  }\n  if(source==='hue'){\n    const ip=global.get('hue_ip'); const key=global.get('hue_api_key');\n    if(!ip||!key) return done(false,'Hue not connected');\n    const full=await get(ip,'/api/'+key,9000);\n    if(!full) return done(false,'Hue unreachable');\n    let j; try{ j=JSON.parse(full.body); }catch(e){ return done(false,'bad Hue response'); }\n    if(Array.isArray(j)&&j[0]&&j[0].error) return done(false,'Hue error: '+(j[0].error.description||''));\n    const groups=j.groups||{}; const rooms=Object.keys(groups).filter(k=>groups[k].type==='Room'||groups[k].type==='Zone').map(k=>({name:groups[k].name,type:groups[k].type,lights:(groups[k].lights||[]).length}));\n    const summary={lights:Object.keys(j.lights||{}).length,rooms:rooms.length,scenes:Object.keys(j.scenes||{}).length,sensors:Object.keys(j.sensors||{}).length};\n    const cfg=Object.assign({source:'hue',ip,fetched_at:new Date().toISOString(),room_list:rooms,raw:j},summary);\n    try{ fs.writeFileSync('/cbox/discovered/hue.json',JSON.stringify(cfg,null,1)); }catch(e){ return done(false,'write failed: '+e.message); }\n    const sum=Object.assign({fetched_at:cfg.fetched_at,room_names:rooms.map(r=>r.name).slice(0,20)},summary);\n    global.set('hue_config',sum);\n    return done(true,'Hue config updated',sum);\n  }\n  return done(false,'source must be ccu or hue');\n})();",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "http",
+        "module": "http"
+      },
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-cfg-out"
+      ]
+    ]
+  },
+  {
+    "id": "app-cfg-out",
+    "type": "http response",
+    "z": "dp-tab",
+    "name": "",
+    "statusCode": "",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 0,
+    "y": 0,
+    "wires": []
   }
 ]
