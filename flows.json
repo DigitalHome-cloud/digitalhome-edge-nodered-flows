@@ -5334,5 +5334,62 @@
         "hue-txt-native"
       ]
     ]
+  },
+  {
+    "id": "app-status-in",
+    "type": "http in",
+    "z": "dp-tab",
+    "name": "/app-api/status",
+    "url": "/app-api/status",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-fn-status"
+      ]
+    ]
+  },
+  {
+    "id": "app-fn-status",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "edge status (headless API)",
+    "func": "const idx=global.get('aboxIndex')||{};\nconst rm=(global.get('recent_mapped')||[]).length;\nmsg.headers={'content-type':'application/json'};\nmsg.statusCode=200;\nmsg.payload={\n  solar:{ link: global.get('solar_link_state')||{state:'unlinked'}, latest: global.get('solar_latest')||null },\n  ccu:  { link: global.get('ccu_link')||{state:'unlinked'}, latest: global.get('ccu_latest')||null },\n  hue:  { link: global.get('hue_link')||{state:'unlinked'}, latest: global.get('hue_latest')||null },\n  pipeline:{ counts: idx.counts||null, sources: idx.sources||[], recent_mapped: rm },\n  ts: new Date().toISOString()\n};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-status-out"
+      ]
+    ]
+  },
+  {
+    "id": "app-status-out",
+    "type": "http response",
+    "z": "dp-tab",
+    "name": "",
+    "statusCode": "",
+    "headers": {},
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "app-comment",
+    "type": "comment",
+    "z": "dp-tab",
+    "name": "Edge web app (Gatsby) headless API — served static at /app, JSON at /app-api/*",
+    "info": "See docs/specs/edge-webapp.md",
+    "x": 0,
+    "y": 0,
+    "wires": []
   }
 ]
