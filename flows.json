@@ -5795,5 +5795,29 @@
     "x": 0,
     "y": 0,
     "wires": []
+  },
+  {
+    "id": "app-link-tmpl",
+    "type": "ui-template",
+    "z": "dp-tab",
+    "group": "ui-group-header",
+    "page": "",
+    "ui": "",
+    "name": "Web App link",
+    "order": 0,
+    "width": 0,
+    "height": 1,
+    "head": "",
+    "format": "<template><a href=\"/app\" style=\"display:inline-block;padding:8px 14px;border:1px solid rgba(148,163,184,.4);border-radius:8px;color:#38bdf8;text-decoration:none;font-size:13px\">→ Open the Web App (/app)</a></template>",
+    "storeOutMessages": false,
+    "passthru": false,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      []
+    ]
   }
 ]
