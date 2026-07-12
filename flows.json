@@ -5499,5 +5499,66 @@
         "sol-notify"
       ]
     ]
+  },
+  {
+    "id": "app-ws-listener",
+    "type": "websocket-listener",
+    "path": "/app-api/ws",
+    "wholemsg": "false"
+  },
+  {
+    "id": "app-ws-inject",
+    "type": "inject",
+    "z": "dp-tab",
+    "name": "push status (3s)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "6",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-fn-ws"
+      ]
+    ]
+  },
+  {
+    "id": "app-fn-ws",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "build status → ws",
+    "func": "const idx=global.get('aboxIndex')||{};\nconst rm=(global.get('recent_mapped')||[]).length;\nmsg.payload={\n  solar:{ link: global.get('solar_link_state')||{state:'unlinked'}, latest: global.get('solar_latest')||null },\n  ccu:  { link: global.get('ccu_link')||{state:'unlinked'}, latest: global.get('ccu_latest')||null },\n  hue:  { link: global.get('hue_link')||{state:'unlinked'}, latest: global.get('hue_latest')||null },\n  pipeline:{ counts: idx.counts||null, sources: idx.sources||[], recent_mapped: rm },\n  ts: new Date().toISOString()\n};\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-ws-out"
+      ]
+    ]
+  },
+  {
+    "id": "app-ws-out",
+    "type": "websocket out",
+    "z": "dp-tab",
+    "name": "/app-api/ws",
+    "server": "app-ws-listener",
+    "client": "",
+    "x": 0,
+    "y": 0,
+    "wires": []
   }
 ]
