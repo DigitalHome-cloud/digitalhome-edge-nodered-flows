@@ -5357,7 +5357,7 @@
     "type": "function",
     "z": "dp-tab",
     "name": "edge status (headless API)",
-    "func": "const idx=global.get('aboxIndex')||{};\nconst rm=(global.get('recent_mapped')||[]).length;\nmsg.headers={'content-type':'application/json'};\nmsg.statusCode=200;\nmsg.payload={\n  solar:{ link: global.get('solar_link_state')||{state:'unlinked'}, latest: global.get('solar_latest')||null },\n  ccu:  { link: global.get('ccu_link')||{state:'unlinked'}, latest: global.get('ccu_latest')||null },\n  hue:  { link: global.get('hue_link')||{state:'unlinked'}, latest: global.get('hue_latest')||null },\n  pipeline:{ counts: idx.counts||null, sources: idx.sources||[], recent_mapped: rm },\n  config: { ccu: global.get('ccu_config')||null, hue: global.get('hue_config')||null },\n  ts: new Date().toISOString()\n};\nreturn msg;",
+    "func": "const idx=global.get('aboxIndex')||{};\nconst rm=(global.get('recent_mapped')||[]).length;\nmsg.headers={'content-type':'application/json'};\nmsg.statusCode=200;\nmsg.payload={\n  solar:{ link: global.get('solar_link_state')||{state:'unlinked'}, latest: global.get('solar_latest')||null },\n  ccu:  { link: global.get('ccu_link')||{state:'unlinked'}, latest: global.get('ccu_latest')||null },\n  hue:  { link: global.get('hue_link')||{state:'unlinked'}, latest: global.get('hue_latest')||null },\n  pipeline:{ counts: idx.counts||null, sources: idx.sources||[], recent_mapped: rm },\n  config: { ccu: global.get('ccu_config')||null, hue: global.get('hue_config')||null },\n  cbox: global.get('cbox_summary')||null,\n  ts: new Date().toISOString()\n};\nreturn msg;",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
@@ -5867,6 +5867,105 @@
   },
   {
     "id": "app-cfg-out",
+    "type": "http response",
+    "z": "dp-tab",
+    "name": "",
+    "statusCode": "",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "app-cbox-in",
+    "type": "http in",
+    "z": "dp-tab",
+    "name": "POST /app-api/cbox-generate",
+    "url": "/app-api/cbox-generate",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-fn-cbox"
+      ]
+    ]
+  },
+  {
+    "id": "app-cbox-get",
+    "type": "http in",
+    "z": "dp-tab",
+    "name": "GET /app-api/cbox",
+    "url": "/app-api/cbox",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-fn-cbox-get"
+      ]
+    ]
+  },
+  {
+    "id": "app-fn-cbox",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "C-BOX generator",
+    "func": "return (async()=>{\n  const rd=(p)=>{ try{ return JSON.parse(fs.readFileSync(p,'utf8')); }catch(e){ return null; } };\n  const done=(ok,message,extra)=>{ msg.statusCode=ok?200:400; msg.payload=Object.assign({ok,message},extra||{}); return msg; };\n  const get=(ip,path,tmo)=>new Promise((res)=>{ try{ const req=http.get('http://'+ip+path,{timeout:tmo||9000},(r)=>{ let b=''; r.on('data',c=>b+=c); r.on('end',()=>res(b)); }); req.on('timeout',()=>{req.destroy();res(null);}); req.on('error',()=>res(null)); }catch(e){ res(null); } });\n\n  const idx=global.get('aboxIndex')||{sourceMap:{},capability:{}};\n  const mapField=(source,field)=>{ const e=(idx.sourceMap||{})[source+'/'+field]; if(!e) return null; const cap=(idx.capability||{})[e.capability]||{}; return {capability:e.capability, brickClass:cap.brickClass, unit:cap.unit, valueType:cap.valueType}; };\n\n  const homeId=global.get('homeId')||'edge-home';\n  const graph=[]; let nRooms=0,nDev=0,nPts=0;\n  const home={ \"@id\":\"urn:dhe:home:\"+homeId, \"@type\":\"rec:Building\", \"rec:label\":homeId };\n  graph.push(home);\n  const roomIds={};\n  const addRoom=(key,label,floor,source)=>{ const k=source+':'+key; if(roomIds[k]) return roomIds[k];\n    const id=\"urn:dhe:room:\"+source+\":\"+key; const r={ \"@id\":id, \"@type\":\"rec:Room\", \"rec:label\":label, \"rec:isPartOf\":home[\"@id\"] };\n    if(floor!=null) r[\"dhc:floor\"]=floor; graph.push(r); roomIds[k]=id; nRooms++; return id; };\n  const point=(id,cls,mp,srcRef,devId)=>{ const pt={ \"@id\":id, \"@type\":cls, \"dhc:capability\":mp.capability, \"dhc:sourceRef\":srcRef, \"brick:isPointOf\":devId, \"slab:criticality\":\"normal\" };\n    if(mp.unit) pt[\"dhc:unit\"]=mp.unit; if(mp.valueType) pt[\"dhc:valueType\"]=mp.valueType; graph.push(pt); nPts++; return id; };\n\n  // ---------- CCU ----------\n  const ccu=rd('/cbox/discovered/ccu.json');\n  if(ccu && ccu.raw){\n    const chanRoom={};\n    let m; const roomRe=/<room\\b([^>]*)>([\\s\\S]*?)<\\/room>/g;\n    while((m=roomRe.exec(ccu.raw.roomlist||''))){ const attrs=m[1];\n      const name=(attrs.match(/name=['\"]([^'\"]*)['\"]/)||[])[1]||'room'; const rise=(attrs.match(/ise_id=['\"](\\d+)['\"]/)||[])[1]||name;\n      const fm=name.match(/^(\\d+)\\./); const floor=fm?parseInt(fm[1]):null; const rid=addRoom(rise,name,floor,'ccu');\n      let cm; const cre=/<channel[^>]*ise_id=['\"](\\d+)['\"]/g; while((cm=cre.exec(m[2]))) chanRoom[cm[1]]=rid;\n    }\n    const equip=(t)=>{ t=t||''; if(/RT-DN|STHD|eTRV|TC-IT|thermostat/i.test(t)) return 'brick:Thermostat';\n      if(/Dim/i.test(t)) return 'brick:Luminaire'; if(/MDIR|motion|PIR/i.test(t)) return 'brick:Occupancy_Sensor';\n      if(/-SC|window|door|contact/i.test(t)) return 'brick:Contact_Sensor'; if(/WDS|weather|climate/i.test(t)) return 'brick:Weather_Station';\n      if(/PMSw|power|meter/i.test(t)) return 'brick:Electrical_Meter'; return 'brick:Equipment'; };\n    const ip=global.get('ccu_ip'), token=global.get('ccu_token');\n    const sid=token?('?sid='+encodeURIComponent(token)):'';\n    const state = ip ? await get(ip,'/addons/xmlapi/statelist.cgi'+sid,12000) : null;\n    if(state && !/not_authenticated/.test(state)){\n      let dm; const devRe=/<device\\b([^>]*)>([\\s\\S]*?)<\\/device>/g;\n      while((dm=devRe.exec(state))){ const attrs=dm[1], inner=dm[2];\n        const nm=(attrs.match(/name=['\"]([^'\"]*)['\"]/)||[])[1]||'device';\n        const addr=(attrs.match(/address=['\"]([^'\"]*)['\"]/)||[])[1]||'';\n        if(!addr) continue; const devId=\"urn:dhe:device:ccu:\"+addr; let room=null; const pts=[];\n        let cm; const cre=/<channel\\b([^>]*)>([\\s\\S]*?)<\\/channel>/g;\n        while((cm=cre.exec(inner))){ const cattr=cm[1], cinner=cm[2];\n          const cise=(cattr.match(/ise_id=['\"](\\d+)['\"]/)||[])[1]; const cidx=(cattr.match(/index=['\"](\\d+)['\"]/)||[])[1]||'0';\n          if(cise && chanRoom[cise] && !room) room=chanRoom[cise];\n          let dp; const dre=/<datapoint\\b([^>]*?)\\/?>/g;\n          while((dp=dre.exec(cinner))){ const dname=(((dp[1].match(/name=['\"]([^'\"]*)['\"]/)||[])[1])||'').split('.').pop();\n            if(!dname) continue; const mp=mapField('ccu',dname); if(!mp||!mp.brickClass) continue;\n            pts.push(point(\"urn:dhe:point:ccu:\"+addr+\":\"+cidx+\":\"+dname, mp.brickClass, mp, \"ccu:\"+addr+\":\"+cidx+\"/\"+dname, devId)); }\n        }\n        if(pts.length){ const dev={ \"@id\":devId, \"@type\":equip((attrs.match(/device_type=['\"]([^'\"]*)['\"]/)||[])[1]), \"rec:label\":nm, \"dhc:source\":\"ccu\", \"dhc:sourceRef\":\"ccu:\"+addr, \"brick:hasPoint\":pts };\n          if(room) dev[\"rec:isLocatedIn\"]=room; graph.push(dev); nDev++; }\n      }\n    }\n  }\n  // ---------- HUE ----------\n  const hue=rd('/cbox/discovered/hue.json');\n  if(hue && hue.raw){ const H=hue.raw; const groups=H.groups||{}, lights=H.lights||{}, sensors=H.sensors||{};\n    const lroom={};\n    for(const gk of Object.keys(groups)){ const g=groups[gk]; if(g.type!=='Room'&&g.type!=='Zone') continue;\n      const rid=addRoom('g'+gk,g.name,null,'hue'); (g.lights||[]).forEach(lid=>lroom[lid]=rid); }\n    const lequip=(t)=>/plug|On\\/Off/i.test(t||'')?'brick:Equipment':'brick:Luminaire';\n    for(const lid of Object.keys(lights)){ const l=lights[lid]; const uid=l.uniqueid||('light-'+lid); const devId=\"urn:dhe:device:hue:\"+uid;\n      const st=l.state||{}; const pts=[];\n      for(const field of Object.keys(st)){ if(!['on','bri','ct','reachable'].includes(field)) continue; const mp=mapField('hue',field); if(!mp||!mp.brickClass) continue;\n        pts.push(point(\"urn:dhe:point:hue:\"+uid+\":\"+field, mp.brickClass, mp, \"hue:\"+uid+\"/\"+field, devId)); }\n      if(pts.length){ const dev={ \"@id\":devId, \"@type\":lequip(l.type), \"rec:label\":l.name, \"dhc:source\":\"hue\", \"dhc:sourceRef\":\"hue:\"+uid, \"brick:hasPoint\":pts };\n        if(lroom[lid]) dev[\"rec:isLocatedIn\"]=lroom[lid]; graph.push(dev); nDev++; }\n    }\n    for(const sk of Object.keys(sensors)){ const sn=sensors[sk]; const st=sn.state||{}; const uid=sn.uniqueid||('sensor-'+sk); const devId=\"urn:dhe:device:hue:\"+uid; const pts=[];\n      for(const field of Object.keys(st)){ const mp=mapField('hue',field); if(!mp||!mp.brickClass) continue;\n        pts.push(point(\"urn:dhe:point:hue:\"+uid+\":\"+field, mp.brickClass, mp, \"hue:\"+uid+\"/\"+field, devId)); }\n      if(pts.length){ graph.push({ \"@id\":devId, \"@type\":\"brick:Sensor\", \"rec:label\":sn.name, \"dhc:source\":\"hue\", \"dhc:sourceRef\":\"hue:\"+uid, \"brick:hasPoint\":pts }); nDev++; }\n    }\n  }\n  if(nRooms===0 && nDev===0) return done(false,'no discovered config — run Update config for CCU/Hue first');\n\n  const cbox={ \"@context\":{ \"brick\":\"https://brickschema.org/schema/Brick#\",\"rec\":\"https://w3id.org/rec#\",\"dhc\":\"https://schema.digitalhome.cloud/v0#\",\"slab\":\"https://schema.slab5.io/v0#\",\"unit\":\"http://qudt.org/vocab/unit/\",\"xsd\":\"http://www.w3.org/2001/XMLSchema#\" },\n    \"dhc:homeId\":homeId, \"dhc:generatedAt\":new Date().toISOString(), \"dhc:generator\":\"edge-cbox-gen/0.1\", \"@graph\":graph };\n  try{ fs.mkdirSync('/cbox',{recursive:true});\n    if(fs.existsSync('/cbox/cbox.jsonld')){ try{ fs.mkdirSync('/cbox/cbox.history',{recursive:true}); fs.copyFileSync('/cbox/cbox.jsonld','/cbox/cbox.history/cbox-'+Date.now()+'.jsonld'); }catch(e){} }\n    fs.writeFileSync('/cbox/cbox.jsonld',JSON.stringify(cbox,null,1),{mode:0o600});\n  }catch(e){ return done(false,'write failed: '+e.message); }\n  const sum={rooms:nRooms,devices:nDev,points:nPts,generatedAt:cbox[\"dhc:generatedAt\"]};\n  global.set('cbox_summary',sum);\n  return done(true,'C-BOX generated',sum);\n})();",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "http",
+        "module": "http"
+      },
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-cbox-out"
+      ]
+    ]
+  },
+  {
+    "id": "app-fn-cbox-get",
+    "type": "function",
+    "z": "dp-tab",
+    "name": "serve cbox.jsonld",
+    "func": "try{ msg.payload=JSON.parse(fs.readFileSync('/cbox/cbox.jsonld','utf8')); msg.statusCode=200; }catch(e){ msg.statusCode=404; msg.payload={error:'no C-BOX yet — generate it first'}; } return msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      }
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": [
+      [
+        "app-cbox-out"
+      ]
+    ]
+  },
+  {
+    "id": "app-cbox-out",
     "type": "http response",
     "z": "dp-tab",
     "name": "",
