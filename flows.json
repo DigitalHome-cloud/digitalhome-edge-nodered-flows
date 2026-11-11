@@ -5041,7 +5041,8 @@
     "y": 0,
     "wires": [
       [
-        "ccu-fn-ingest"
+        "ccu-fn-ingest",
+        "panel-link-ccu-out"
       ]
     ]
   },
@@ -5140,7 +5141,8 @@
     "y": 0,
     "wires": [
       [
-        "hue-fn-ingest"
+        "hue-fn-ingest",
+        "panel-link-hue-out"
       ]
     ]
   },
@@ -5973,6 +5975,173 @@
     "headers": {
       "content-type": "application/json"
     },
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "tab-panel",
+    "type": "tab",
+    "label": "Panel",
+    "disabled": false,
+    "info": "# Panel: phones as MQTT end devices (scan and control)\n\nEach QR code is a client of the edge's broker with a scope (floors, rooms, functions).\nThe `panel` node publishes each code's tiles and state and checks every tap against the\ncode's scope. This tab does the device I/O (the edge's golden rule):\n\n- **in**: what the CCU and the Hue bridge report, taken from the data pipeline's polls\n  (link nodes), so tiles show the real state.\n- **out 1**: one checked command per tap -> `write device` -> Hue REST / CCU XML-API.\n  When the bell rings, the chosen Hue lights (blink) and chimes come the same way.\n- **out 2**: bell and phone events (`ring`, `answer`, `status`): wire lights or a chime here.\n\nCodes: `GET/POST/DELETE /api/panel/codes` (behind the edge's password), or the Codes\nsection of the web app. Spec: `docs/specs/panel-scan-and-control.md`."
+  },
+  {
+    "id": "panel-link-ccu-in",
+    "type": "link in",
+    "z": "tab-panel",
+    "name": "CCU statelist",
+    "links": [
+      "panel-link-ccu-out"
+    ],
+    "x": 95,
+    "y": 80,
+    "wires": [
+      [
+        "panel-fn-ccu"
+      ]
+    ]
+  },
+  {
+    "id": "panel-link-hue-in",
+    "type": "link in",
+    "z": "tab-panel",
+    "name": "Hue lights",
+    "links": [
+      "panel-link-hue-out"
+    ],
+    "x": 95,
+    "y": 140,
+    "wires": [
+      [
+        "panel-fn-hue"
+      ]
+    ]
+  },
+  {
+    "id": "panel-fn-ccu",
+    "type": "function",
+    "z": "tab-panel",
+    "name": "CCU values + ise ids",
+    "func": "// The CCU's parsed statelist -> values for the panel node, and each datapoint's ise_id for writing.\n// Key: \"<device name>:<channel index>/<DATAPOINT>\", the same as the twin's dhc:sourceRef.\nconst root=msg.payload&&(msg.payload.stateList||msg.payload.statelist||msg.payload.state);\nconst devices=root&&root.device?[].concat(root.device):[];\nif(!devices.length) return null;\nconst values={}, ise={};\nfor(const dev of devices){ const name=(dev.$||{}).name; if(!name) continue;\n  for(const ch of (dev.channel?[].concat(dev.channel):[])){ const idx=(ch.$||{}).index!=null?(ch.$||{}).index:'0';\n    for(const d0 of (ch.datapoint?[].concat(ch.datapoint):[])){ const p=d0.$||d0; if(p.name==null) continue;\n      const key=name+':'+idx+'/'+String(p.name).split('.').pop();\n      const n=Number(p.value);\n      values[key]=(p.valuetype==='2'||p.valuetype===2)?(p.value==='true'||p.value===true):(p.value===''||isNaN(n)?p.value:n);\n      if(p.ise_id) ise[key]=p.ise_id;\n    } } }\nglobal.set('panel_ccu_ise',ise);\nnode.status({fill:'green',shape:'dot',text:Object.keys(values).length+' datapoints'});\nreturn { topic:'values', payload:{ source:'ccu', values } };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 260,
+    "y": 80,
+    "wires": [
+      [
+        "panel-engine"
+      ]
+    ]
+  },
+  {
+    "id": "panel-fn-hue",
+    "type": "function",
+    "z": "tab-panel",
+    "name": "Hue values + light ids",
+    "func": "// The Hue bridge's lights -> values for the panel node, and each light's bridge id for writing.\n// Key: the light's uniqueid, the same as the twin's dhc:sourceRef.\nif(msg.topic!=='lights'||!msg.payload||typeof msg.payload!=='object'||Array.isArray(msg.payload)) return null;\nconst values={}, ids={};\nfor(const [id,l] of Object.entries(msg.payload)){ if(!l||!l.state) continue;\n  const uid=l.uniqueid||('light-'+id); ids[uid]=id;\n  values[uid]={ on:!!l.state.on, bri:l.state.bri, reachable:l.state.reachable!==false };\n}\nglobal.set('panel_hue_ids',ids);\nnode.status({fill:'green',shape:'dot',text:Object.keys(values).length+' lights'});\nreturn { topic:'values', payload:{ source:'hue', values } };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 260,
+    "y": 140,
+    "wires": [
+      [
+        "panel-engine"
+      ]
+    ]
+  },
+  {
+    "id": "panel-engine",
+    "type": "dhc-panel",
+    "z": "tab-panel",
+    "name": "panel",
+    "brokerUrl": "mqtt://127.0.0.1:1883",
+    "username": "dhe-nodered",
+    "passwordFile": "/secrets/mqtt-nodered-password",
+    "wsPort": "9001",
+    "registryFile": "/cbox/panel-codes.json",
+    "cboxFile": "/cbox/cbox.jsonld",
+    "x": 470,
+    "y": 110,
+    "wires": [
+      [
+        "panel-fn-write"
+      ],
+      [
+        "panel-debug-events"
+      ]
+    ]
+  },
+  {
+    "id": "panel-fn-write",
+    "type": "function",
+    "z": "tab-panel",
+    "name": "write device (Hue / CCU)",
+    "func": "// One checked command from the panel node -> the device. msg.payload: { source, ref, set, value, label }\n// set: on | level | setpoint from a tile; alert (Hue) and on (a chime) when the bell rings.\nreturn (async()=>{\n  const c=msg.payload||{};\n  const call=(method,ip,path,body)=>new Promise((resolve)=>{ try{\n    const data=body?JSON.stringify(body):null; const headers={};\n    if(data){ headers['Content-Type']='application/json'; headers['Content-Length']=Buffer.byteLength(data); }\n    const req=http.request({hostname:ip,port:80,path,method,timeout:5000,headers},(res)=>{ let b=''; res.on('data',d=>b+=d); res.on('end',()=>resolve({status:res.statusCode,body:b})); });\n    req.on('timeout',()=>{req.destroy();resolve(null);}); req.on('error',()=>resolve(null));\n    if(data) req.write(data); req.end();\n  }catch(e){ resolve(null); } });\n  const fail=(why)=>{ node.status({fill:'red',shape:'ring',text:why}); node.warn('panel: '+(c.label||c.ref)+': '+why); return null; };\n  const ok=()=>{ node.status({fill:'green',shape:'dot',text:(c.label||'')+' '+c.set+'='+c.value}); return null; };\n\n  if(c.source==='hue'){\n    const ip=global.get('hue_ip'), key=global.get('hue_api_key'); if(!ip||!key) return fail('Hue not connected');\n    const id=(global.get('panel_hue_ids')||{})[c.ref]; if(!id) return fail('Hue light not seen yet');\n    let body;\n    if(c.set==='on') body={on:!!c.value};\n    else if(c.set==='level') body=c.value>0?{on:true,bri:Math.max(1,Math.min(254,Math.round(c.value*2.54)))}:{on:false};\n    else if(c.set==='alert') body={alert:'lselect'};   // the bell: the lamp blinks for 15 s and returns to what it was\n    else return fail('Hue cannot '+c.set);\n    const r=await call('PUT',ip,'/api/'+key+'/lights/'+encodeURIComponent(id)+'/state',body);\n    if(!r) return fail('Hue unreachable');\n    if(/\"error\"/.test(r.body)) return fail('Hue refused: '+r.body.slice(0,120));\n    return ok();\n  }\n  if(c.source==='ccu'){\n    const ip=global.get('ccu_ip'); if(!ip) return fail('CCU not connected');\n    const ise=(global.get('panel_ccu_ise')||{})[c.ref]; if(!ise) return fail('CCU datapoint not seen yet');\n    let v;\n    if(c.set==='on') v=c.value?'true':'false';\n    else if(c.set==='level') v=(Math.max(0,Math.min(100,Number(c.value)))/100).toFixed(2);\n    else if(c.set==='setpoint') v=Number(c.value).toFixed(1);\n    else return fail('CCU cannot '+c.set);\n    const token=global.get('ccu_token'), sid=global.get('ccu_sid');\n    const auth=token?('&sid='+encodeURIComponent(token)):(sid?('&sid=@'+sid+'@'):'');\n    const r=await call('GET',ip,'/addons/xmlapi/statechange.cgi?ise_id='+encodeURIComponent(ise)+'&new_value='+encodeURIComponent(v)+auth,null);\n    if(!r) return fail('CCU unreachable');\n    if(/not_authenticated/.test(r.body)) return fail('CCU not authenticated');\n    if(!/<changed/.test(r.body)) return fail('CCU did not change it: '+r.body.slice(0,120));\n    return ok();\n  }\n  return fail('unknown source '+c.source);\n})();",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "http",
+        "module": "http"
+      }
+    ],
+    "x": 690,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "panel-debug-events",
+    "type": "debug",
+    "z": "tab-panel",
+    "name": "bell and phone events",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 690,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "panel-link-ccu-out",
+    "type": "link out",
+    "z": "dp-tab",
+    "name": "to Panel: CCU statelist",
+    "mode": "link",
+    "links": [
+      "panel-link-ccu-in"
+    ],
+    "x": 0,
+    "y": 0,
+    "wires": []
+  },
+  {
+    "id": "panel-link-hue-out",
+    "type": "link out",
+    "z": "dp-tab",
+    "name": "to Panel: Hue lights",
+    "mode": "link",
+    "links": [
+      "panel-link-hue-in"
+    ],
     "x": 0,
     "y": 0,
     "wires": []
